@@ -12,8 +12,9 @@ package main
 
 import (
 	"fmt"
-
-	"github.com/go-vgo/robotgo"
+	// "time"
+	// "os"
+	r "github.com/htmk/robotgo"
 	// "go-vgo/robotgo"
 )
 
@@ -22,38 +23,53 @@ func event() {
 	// Global event listener
 	////////////////////////////////////////////////////////////////////////////////
 
-	fmt.Println("--- Please press v---")
-	eve := robotgo.AddEvent("v")
+	// fmt.Println("--- Please press v---")
+	// eve := robotgo.AddEvent("v")
 
-	if eve == 0 {
-		fmt.Println("--- You press v---", "v")
-	}
+	// if eve == 0 {
+	// 	fmt.Println("--- You press v---", "v")
+	// }
 
-	fmt.Println("--- Please press k---")
-	keve := robotgo.AddEvent("k")
-	if keve == 0 {
-		fmt.Println("--- You press k---", "k")
-	}
+	// fmt.Println("--- Please press k---")
+	// keve := robotgo.AddEvent("k")
+	// if keve == 0 {
+	// 	fmt.Println("--- You press k---", "k")
+	// }
 
-	fmt.Println("--- Please press f1---")
-	feve := robotgo.AddEvent("f1")
-	if feve == 0 {
-		fmt.Println("You press...", "f1")
-	}
+	// fmt.Println("--- Please press f1---")
+	// feve := robotgo.AddEvent("f1")
+	// if feve == 0 {
+	// 	fmt.Println("You press...", "f1")
+	// }
 
-	fmt.Println("--- Please press left mouse button---")
-	mleft := robotgo.AddEvent("mleft")
-	if mleft == 0 {
-		fmt.Println("--- You press left mouse button---", "mleft")
-	}
+	// fmt.Println("--- Please press left mouse button---")
+	// mleft := robotgo.AddEvent("mleft")
+	// if mleft == 0 {
+	// 	fmt.Println("--- You press left mouse button---", "mleft")
+	// }
 
-	mright := robotgo.AddEvent("mright")
-	if mright == 0 {
-		fmt.Println("--- You press right mouse button---", "mright")
-	}
+	// mright := robotgo.AddEvent("mright")
+	// if mright == 0 {
+	// 	fmt.Println("--- You press right mouse button---", "mright")
+	// }
 
 	// stop AddEvent
 	// robotgo.StopEvent()
+	c := make(chan r.Event,100)
+	go r.EventListener(c)
+	for {
+		select{
+		case ev := <-c:
+			fmt.Printf("kind: %+v, %+v\n",ev.Type(),ev)
+			// fmt.Printf("%v\n",)
+		// default:
+		// 	time.Sleep(100*time.Millisecond)
+		}
+	}
+	// fmt.Println("woo!")
+	// time.Sleep(time.Second*3)
+
+	r.StopEvent()
 }
 
 func main() {

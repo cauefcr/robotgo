@@ -62,6 +62,7 @@ import (
 	"unsafe"
 	// "syscall"
 	"os/exec"
+	"errors"
 
 	"github.com/go-vgo/robotgo/clipboard"
 	"github.com/shirou/gopsutil/process"
@@ -1254,9 +1255,39 @@ func AddEvent(key string) int {
 	return geve
 }
 
+type Event_type int
+
+type Event interface {
+	Type() Event_type
+	Time() uint64
+}
+
+//to-do: something better than this global variable
+var Event__ chan Event
+
+func EventListener(c chan Event){
+	Event__ = c
+	startEvent()	
+}
+
+// Start event listener
+func startEvent() error {
+	ret := C.start_event_hook()
+	if ret != 0  {
+		return errors.New("Start event error: " + strconv.Itoa(int(C.int(ret))))
+	} else {
+		return nil
+	}
+}
+
 // StopEvent stop event listener
-func StopEvent() {
-	C.stop_event()
+func StopEvent() error {
+	ret := C.stop_event()
+	if ret != 0  {
+		return errors.New("Stop event error: " + strconv.Itoa(int(C.int(ret))))
+	} else {
+		return nil
+	}
 }
 
 /*

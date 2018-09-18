@@ -19,6 +19,76 @@
 
 #include "pub.h"
 
+// send events to a channel as they appear?
+void dispatch_proc2(iohook_event * const event) {
+	char buffer[256] = { 0 };
+	size_t length = snprintf(buffer, sizeof(buffer),
+			"id=%i,when=%" PRIu64 ",mask=0x%X",
+			event->type, event->time, event->mask);
+
+	switch (event->type) {
+		case EVENT_KEY_PRESSED:
+		case EVENT_KEY_RELEASED:
+		case EVENT_KEY_TYPED:
+			snprintf(buffer + length, sizeof(buffer) - length,
+				",keychar=%lc,rawcode=%u",
+				(uint16_t) event->data.keyboard.keychar,
+				event->data.keyboard.rawcode);
+				keyboard_event out_k = {
+					.type = event->type,
+					.time = event->time,
+					.mask = event->mask,
+					.reserved = event->reserved,
+					// .data = event->data.keyboard
+				};
+				out_k.data.keychar = event->data.keyboard.keychar;
+				out_k.data.rawcode = event->data.keyboard.rawcode;
+				out_k.data.keychar = event->data.keyboard.keychar;
+				send_key_event(out_k);
+			break;
+		case EVENT_MOUSE_PRESSED:
+		case EVENT_MOUSE_RELEASED:
+		case EVENT_MOUSE_CLICKED:
+		case EVENT_MOUSE_MOVED:
+		case EVENT_MOUSE_DRAGGED:
+			snprintf(buffer + length, sizeof(buffer) - length,
+				",x=%i,y=%i,button=%i,clicks=%i",
+				event->data.mouse.x, event->data.mouse.y,
+				event->data.mouse.button, event->data.mouse.clicks);
+			mouse_event out_m = {
+					.type = event->type,
+					.time = event->time,
+					.mask = event->mask,
+					.reserved = event->reserved,
+					// .data = event->data.mouse
+			};
+			out_m.data.button = event->data.mouse.button;
+			out_m.data.clicks = event->data.mouse.clicks;
+			out_m.data.x = event->data.mouse.x;
+			out_m.data.y = event->data.mouse.y;
+			send_mouse_event(out_m);
+			break;
+
+		case EVENT_MOUSE_WHEEL:
+			snprintf(buffer + length, sizeof(buffer) - length,
+				",type=%i,amount=%i,rotation=%i",
+				event->data.wheel.type, event->data.wheel.amount,
+				event->data.wheel.rotation);
+			mouse_wheel_event out_mw = {
+					.type = event->type,
+					.time = event->time,
+					.mask = event->mask,
+					.reserved = event->reserved,
+					.data = event->data.wheel
+			};
+			send_mouse_wheel_event(out_mw);
+			break;
+		default:
+			break;
+	}
+	
+	fprintf(stdout, "-ev : %s\n",	 buffer);
+}
 
 void dispatch_proc(iohook_event * const event) {
 	char buffer[256] = { 0 };
@@ -145,8 +215,88 @@ void dispatch_proc(iohook_event * const event) {
 		default:
 			break;
 	}
+	
+	fprintf(stdout, "-ev : %s\n",	 buffer);
+}
 
-	// fprintf(stdout, "----%s\n",	 buffer);
+int start_event_hook(){
+	hookSetlogger(&loggerProc);
+	// Set the event callback for IOhook events.
+	hook_set_dispatch_proc(&dispatch_proc2);
+	// Start the hook and block.
+	// NOTE If EVENT_HOOK_ENABLED was delivered, the status will always succeed.
+	int status = hook_run();
+
+	switch (status) {
+		case IOHOOK_SUCCESS:
+			// Everything is ok.
+			break;
+
+		// System level errors.
+		case IOHOOK_ERROR_OUT_OF_MEMORY:
+			loggerProc(LOG_LEVEL_ERROR, "Failed to allocate memory. (%#X)", status);
+			break;
+
+
+		// X11 specific errors.
+		case IOHOOK_ERROR_X_OPEN_DISPLAY:
+			loggerProc(LOG_LEVEL_ERROR, "Failed to open X11 display. (%#X)", status);
+			break;
+
+		case IOHOOK_ERROR_X_RECORD_NOT_FOUND:
+			loggerProc(LOG_LEVEL_ERROR, "Unable to locate XRecord extension. (%#X)", status);
+			break;
+
+		case IOHOOK_ERROR_X_RECORD_ALLOC_RANGE:
+			loggerProc(LOG_LEVEL_ERROR, "Unable to allocate XRecord range. (%#X)", status);
+			break;
+
+		case IOHOOK_ERROR_X_RECORD_CREATE_CONTEXT:
+			loggerProc(LOG_LEVEL_ERROR, "Unable to allocate XRecord context. (%#X)", status);
+			break;
+
+		case IOHOOK_ERROR_X_RECORD_ENABLE_CONTEXT:
+			loggerProc(LOG_LEVEL_ERROR, "Failed to enable XRecord context. (%#X)", status);
+			break;
+
+
+		// Windows specific errors.
+		case IOHOOK_ERROR_SET_WINDOWS_HOOK_EX:
+			loggerProc(LOG_LEVEL_ERROR, "Failed to register low level windows hook. (%#X)", status);
+			break;
+
+
+		// Darwin specific errors.
+		case IOHOOK_ERROR_AXAPI_DISABLED:
+			loggerProc(LOG_LEVEL_ERROR, "Failed to enable access for assistive devices. (%#X)", status);
+			break;
+
+		case IOHOOK_ERROR_CREATE_EVENT_PORT:
+			loggerProc(LOG_LEVEL_ERROR, "Failed to create apple event port. (%#X)", status);
+			break;
+
+		case IOHOOK_ERROR_CREATE_RUN_LOOP_SOURCE:
+			loggerProc(LOG_LEVEL_ERROR, "Failed to create apple run loop source. (%#X)", status);
+			break;
+
+		case IOHOOK_ERROR_GET_RUNLOOP:
+			loggerProc(LOG_LEVEL_ERROR, "Failed to acquire apple run loop. (%#X)", status);
+			break;
+
+		case IOHOOK_ERROR_CREATE_OBSERVER:
+			loggerProc(LOG_LEVEL_ERROR, "Failed to create apple run loop observer. (%#X)", status);
+			break;
+
+		// Default error.
+		case IOHOOK_FAILURE:
+		default:
+			loggerProc(LOG_LEVEL_ERROR, "An unknown hook error occurred. (%#X)", status);
+			break;
+	}
+
+	// return status;
+	// printf("%d\n", status);
+	return cstatus;
 }
 
 int add_event(char *key_event) {
@@ -255,3 +405,7 @@ int stop_event(){
 
 	return status;
 }
+
+// int stop_event(){
+// 	return stop_event_hook();
+// }

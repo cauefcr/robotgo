@@ -27,9 +27,9 @@
 #define IOHOOK_ERROR_GET_MODULE_HANDLE			0x31
 
 // Darwin specific errors.
-#define IOHOOK_ERROR_AXAPI_DISABLED			0x40
+#define IOHOOK_ERROR_AXAPI_DISABLED				0x40
 #define IOHOOK_ERROR_CREATE_EVENT_PORT			0x41
-#define IOHOOK_ERROR_CREATE_RUN_LOOP_SOURCE	0x42
+#define IOHOOK_ERROR_CREATE_RUN_LOOP_SOURCE		0x42
 #define IOHOOK_ERROR_GET_RUNLOOP				0x43
 #define IOHOOK_ERROR_CREATE_OBSERVER			0x44
 /* End Error Codes */
@@ -91,13 +91,37 @@ typedef struct _mouse_event_data {
 
 typedef struct _mouse_wheel_event_data {
 	uint16_t clicks;
+	uint16_t amount;
 	int16_t x;
 	int16_t y;
-	uint8_t type;
-	uint16_t amount;
 	int16_t rotation;
+	uint8_t type;
 	uint8_t direction;
 } mouse_wheel_event_data;
+
+typedef struct _event_keyboard{
+	event_type type;
+	uint64_t time;
+	uint16_t mask;
+	uint16_t reserved;
+	keyboard_event_data data;
+} keyboard_event;
+
+typedef struct _event_mouse{
+	event_type type;
+	uint64_t time;
+	uint16_t mask;
+	uint16_t reserved;
+	mouse_event_data data;
+} mouse_event;
+
+typedef struct _event_mouse_wheel{
+	event_type type;
+	uint64_t time;
+	uint16_t mask;
+	uint16_t reserved;
+	mouse_wheel_event_data data;	
+} mouse_wheel_event;
 
 typedef struct _iohook_event {
 	event_type type;

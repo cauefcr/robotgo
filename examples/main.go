@@ -34,7 +34,7 @@ func main() {
 	// bitmap()
 
 	// Global event listener
-	// event()
+	event()
 
 	// Window Handle and progress
 	// window()

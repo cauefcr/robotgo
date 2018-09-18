@@ -12,6 +12,8 @@
 // hook, you need to follow the relevant agreement and LICENSE.
 // See the LICENSE file at the top-level directory of this distribution and at
 // https://github.com/robotn/gohook/blob/master/LICENSE
+#ifndef PUB_H
+#define PUB_H
 
 #include "../base/os.h"
 
@@ -98,3 +100,10 @@ bool loggerProc(unsigned int level, const char *format, ...) {
 
 	return status;
 }
+
+//will be exported from go, for channel communication
+extern void send_key_event(struct _event_keyboard kev);
+extern void send_mouse_event(struct _event_mouse mev);
+extern void send_mouse_wheel_event(struct _event_mouse_wheel mev);
+
+#endif
