@@ -224,24 +224,23 @@ package main
 import (
 	"fmt"
 
+	hook "github.com/cauefcr/ghook"
 	"github.com/cauefcr/robotgo"
 )
 
 func main() {
-  ok := robotgo.AddEvents("q", "ctrl", "shift")
-  if ok {
-    fmt.Println("add events...")
-  }
+	fmt.Println("--- Please press ctrl + shift + q to stop hook ---")
+	robotgo.EventHook(hook.KeyDown, []string{"q", "ctrl", "shift"}, func(e hook.Event) {
+		fmt.Println("ctrl-shift-q")
+		robotgo.EventEnd()
+	})
 
-  keve := robotgo.AddEvent("k")
-  if keve {
-    fmt.Println("you press... ", "k")
-  }
-
-  mleft := robotgo.AddEvent("mleft")
-  if mleft {
-    fmt.Println("you press... ", "mouse left button")
-  }
+	fmt.Println("--- Please press w---")
+	robotgo.EventHook(hook.KeyDown, []string{"w"}, func(e hook.Event) {
+		fmt.Println("w")
+	})
+	s := robotgo.EventStart()
+	<-robotgo.EventProcess(s)
 }
 ```
 
