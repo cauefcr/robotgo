@@ -12,12 +12,12 @@
 #include "mouse_c.h"
 
 // Global delays.
-int mouseDelay = 10;
+int mouseDelay = 0;
 // int keyboardDelay = 10;
 
 
 // int CheckMouseButton(const char * const b,
-// MMMouseButton * const button){
+// 	MMMouseButton * const button){
 // 	if (!button) return -1;
 
 // 	if (strcmp(b, "left") == 0) {
@@ -35,23 +35,24 @@ int mouseDelay = 10;
 // 	return 0;
 // }
 
-int move_mouse(size_t x, size_t y){
-	MMPoint point;
-	//int x = 103;
-	//int y = 104;
-	point = MMPointMake(x, y);
+int move_mouse(int32_t x, int32_t y){
+	MMPointInt32 point;
+	// int x = 103;
+	// int y = 104;
+	point = MMPointInt32Make(x, y);
 	moveMouse(point);
 
 	return 0;
 }
 
-int drag_mouse(size_t x, size_t y){
+
+int drag_mouse(int32_t x, int32_t y, MMMouseButton button){
 	// const size_t x = 10;
 	// const size_t y = 20;
-	MMMouseButton button = LEFT_BUTTON;
+	// MMMouseButton button = LEFT_BUTTON;
 
-	MMPoint point;
-	point = MMPointMake(x, y);
+	MMPointInt32 point;
+	point = MMPointInt32Make(x, y);
 	dragMouse(point, button);
 	microsleep(mouseDelay);
 
@@ -59,18 +60,19 @@ int drag_mouse(size_t x, size_t y){
 	return 0;
 }
 
-bool move_mouse_smooth(size_t x, size_t y, double lowSpeed,
+bool move_mouse_smooth(int32_t x, int32_t y, double lowSpeed,
 	double highSpeed, int msDelay){
-	MMPoint point;
-	point = MMPointMake(x, y);
+	MMPointInt32 point;
+	point = MMPointInt32Make(x, y);
+	
 	bool cbool = smoothlyMoveMouse(point, lowSpeed, highSpeed);
 	microsleep(msDelay);
 
 	return cbool;
 }
 
-MMPoint get_mouse_pos(){
-	MMPoint pos = getMousePos();
+MMPointInt32 get_mouse_pos(){
+	MMPointInt32 pos = getMousePos();
 
 	// Return object with .x and .y.
 	// printf("%zu\n%zu\n", pos.x, pos.y );
@@ -104,7 +106,7 @@ int mouse_toggle(char* d, MMMouseButton button){
 
 	toggleMouse(down, button);
 	microsleep(mouseDelay);
-	
+
 	return 0;
 }
 

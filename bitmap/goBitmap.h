@@ -12,22 +12,11 @@
 #include "bitmap_find_c.h"
 #include "../base/color_find_c.h"
 // #include "../screen/screen_c.h"
-#include "../base/io_c.h"
+#include "../base/file_io_c.h"
 #include "../base/pasteboard_c.h"
 #include "../base/str_io_c.h"
 #include <assert.h>
 #include <stdio.h>
-
-// class BMP
-// {
-// 	public:
-// 		size_t width;
-// 		size_t height;
-// 		size_t byteWidth;
-// 		uint8_t bitsPerPixel;
-// 		uint8_t bytesPerPixel;
-// 		uint8_t *image;
-// };
 
 /* Returns false and sets error if |bitmap| is NULL. */
 bool bitmap_ready(MMBitmapRef bitmap){
@@ -68,7 +57,7 @@ MMPoint find_bitmap(MMBitmapRef bitmap, MMBitmapRef sbit, float tolerance){
 	}
 
 	MMRect rect = MMBitmapGetBounds(sbit);
-	// printf("x=%d,y=%d,width=%d,height=%d\n", rect.origin.x, 
+	// printf("x=%d, y=%d, width=%d, height=%d\n", rect.origin.x, 
 	// rect.origin.y, rect.size.width, rect.size.height);
 
 	if (findBitmapInRect(bitmap, sbit, &point,
@@ -106,25 +95,6 @@ int count_of_bitmap(MMBitmapRef bitmap, MMBitmapRef sbit, float tolerance){
 	MMRect rect = MMBitmapGetBounds(bitmap);
 
 	return countOfBitmapInRect(bitmap, sbit, rect, tolerance);
-}
-
-MMPoint aFindBitmap(MMBitmapRef bit_map, MMRect rect){
-	// MMRect rect;
-	// rect.size.width = 10;
-	// rect.size.height = 20;
-	// rect.origin.x = 10;
-	// rect.origin.y = 20;
-
-	float tolerance = 0.0f;
-	MMPoint point;
-
-	tolerance = 0.5;
-
-	if (findBitmapInRect(bit_map, bit_map, &point,
-	                     rect, tolerance) == 0) {
-		return point;
-	}
-	return point;
 }
 
 bool point_in_bounds(MMBitmapRef bitmap, MMPoint point){
@@ -170,7 +140,7 @@ char *bitmap_save(MMBitmapRef bitmap, char *path, uint16_t type){
 		return "Could not save image to file.";
 	}
 	// destroyMMBitmap(bitmap);
-	return "ok";
+	return "";
 }
 
 char *tostring_bitmap(MMBitmapRef bitmap){

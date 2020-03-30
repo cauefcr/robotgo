@@ -16,7 +16,7 @@
 /* Convenience wrappers around ugly APIs. */
 #if defined(IS_WINDOWS)
 	#define WIN32_KEY_EVENT_WAIT(key, flags) \
-		(win32KeyEvent(key, flags), Sleep(DEADBEEF_RANDRANGE(0, 63)))
+		(win32KeyEvent(key, flags), Sleep(DEADBEEF_RANDRANGE(0, 1)))
 #elif defined(USE_X11)
 	#define X_KEY_EVENT(display, key, is_press) \
 		(XTestFakeKeyEvent(display, \
@@ -25,7 +25,7 @@
 		 XSync(display, false))
 	#define X_KEY_EVENT_WAIT(display, key, is_press) \
 		(X_KEY_EVENT(display, key, is_press), \
-		 microsleep(DEADBEEF_UNIFORM(0.0, 62.5)))
+		 microsleep(DEADBEEF_UNIFORM(0.0, 0.5)))
 #endif
 
 #if defined(IS_MACOSX)
@@ -37,12 +37,17 @@ static io_connect_t _getAuxiliaryKeyDriver(void){
 	if (!sEventDrvrRef) {
 		kr = IOMasterPort( bootstrap_port, &masterPort );
 		assert(KERN_SUCCESS == kr);
-		kr = IOServiceGetMatchingServices(masterPort, IOServiceMatching( kIOHIDSystemClass), &iter );
+		kr = IOServiceGetMatchingServices(masterPort, 
+			IOServiceMatching( kIOHIDSystemClass), &iter );
 		assert(KERN_SUCCESS == kr);
+
 		service = IOIteratorNext( iter );
 		assert(service);
-		kr = IOServiceOpen(service, mach_task_self(), kIOHIDParamConnectType, &sEventDrvrRef );
+		
+		kr = IOServiceOpen(service, 
+			mach_task_self(), kIOHIDParamConnectType, &sEventDrvrRef );
 		assert(KERN_SUCCESS == kr);
+
 		IOObjectRelease(service);
 		IOObjectRelease(iter);
 	}
@@ -99,7 +104,17 @@ void win32KeyEvent(int key, MMKeyFlags flags){
 	// 	scan |= 0x80;
 	// }
 
-	keybd_event(key, scan, flags, 0);
+	// keybd_event(key, scan, flags, 0);
+	
+	INPUT keyInput;
+
+	keyInput.type = INPUT_KEYBOARD;
+	keyInput.ki.wVk = key;
+	keyInput.ki.wScan = scan;
+	keyInput.ki.dwFlags = flags;
+	keyInput.ki.time = 0;
+	keyInput.ki.dwExtraInfo = 0;
+	SendInput(1, &keyInput, sizeof(keyInput));
 }
 #endif
 
@@ -110,16 +125,20 @@ void toggleKeyCode(MMKeyCode code, const bool down, MMKeyFlags flags){
 		code = code - 1000; /* Get the real keycode. */
 		NXEventData   event;
 		kern_return_t kr;
+
 		IOGPoint loc = { 0, 0 };
 		UInt32 evtInfo = code << 16 | (down?NX_KEYDOWN:NX_KEYUP) << 8;
+
 		bzero(&event, sizeof(NXEventData));
 		event.compound.subType = NX_SUBTYPE_AUX_CONTROL_BUTTONS;
 		event.compound.misc.L[0] = evtInfo;
-		kr = IOHIDPostEvent( _getAuxiliaryKeyDriver(), NX_SYSDEFINED, loc, &event, kNXEventDataVersion, 0, FALSE );
+
+		kr = IOHIDPostEvent( _getAuxiliaryKeyDriver(), 
+			NX_SYSDEFINED, loc, &event, kNXEventDataVersion, 0, FALSE );
 		assert( KERN_SUCCESS == kr );
 	} else {
 		CGEventRef keyEvent = CGEventCreateKeyboardEvent(NULL,
-		                                                 (CGKeyCode)code, down);
+		                            			(CGKeyCode)code, down);
 		assert(keyEvent != NULL);
 
 		CGEventSetType(keyEvent, down ? kCGEventKeyDown : kCGEventKeyUp);
@@ -157,25 +176,49 @@ void tapKeyCode(MMKeyCode code, MMKeyFlags flags){
 	toggleKeyCode(code, false, flags);
 }
 
+#if defined(USE_X11)
+	bool toUpper(char c) {
+		if (isupper(c)) {
+			return true;
+		}
+
+		char *special = "~!@#$%^&*()_+{}|:\"<>?";
+		while (*special) {
+			if (*special == c) {
+				return true;
+			}
+			special++;
+		}
+		return false;
+	}
+#endif
+
 void toggleKey(char c, const bool down, MMKeyFlags flags){
 	MMKeyCode keyCode = keyCodeForChar(c);
 
 	//Prevent unused variable warning for Mac and Linux.
-#if defined(IS_WINDOWS)
-	int modifiers;
-#endif
+	#if defined(IS_WINDOWS)
+		int modifiers;
+	#endif
 
-	if (isupper(c) && !(flags & MOD_SHIFT)) {
-		flags |= MOD_SHIFT; /* Not sure if this is safe for all layouts. */
-	}
+	#if defined(USE_X11)
+		if (toUpper(c) && !(flags & MOD_SHIFT)) {
+			flags |= MOD_SHIFT; /* Not sure if this is safe for all layouts. */
+		}
+	#else
+		if (isupper(c) && !(flags & MOD_SHIFT)) {
+			flags |= MOD_SHIFT; /* Not sure if this is safe for all layouts. */
+		}
+	#endif
 
-#if defined(IS_WINDOWS)
-	modifiers = keyCode >> 8; // Pull out modifers.
-	if ((modifiers & 1) != 0) flags |= MOD_SHIFT; // Uptdate flags from keycode modifiers.
-    if ((modifiers & 2) != 0) flags |= MOD_CONTROL;
-    if ((modifiers & 4) != 0) flags |= MOD_ALT;
-    keyCode = keyCode & 0xff; // Mask out modifiers.
-#endif
+	#if defined(IS_WINDOWS)
+		modifiers = keyCode >> 8; // Pull out modifers.
+		if ((modifiers & 1) != 0) flags |= MOD_SHIFT; // Uptdate flags from keycode modifiers.
+		if ((modifiers & 2) != 0) flags |= MOD_CONTROL;
+		if ((modifiers & 4) != 0) flags |= MOD_ALT;
+		keyCode = keyCode & 0xff; // Mask out modifiers.
+	#endif
+
 	toggleKeyCode(keyCode, down, flags);
 }
 
@@ -229,7 +272,6 @@ void toggleUnicode(UniChar ch, const bool down){
 		XTestFakeKeyEvent(dpy, code, False, 1);
 
 		XFlush(dpy);
-
 		XCloseDisplay(dpy);
 
 		return 0;
@@ -311,7 +353,7 @@ void typeStringDelayed(const char *str, const unsigned cpm){
 		unicodeType(n);
 
 		if (mspc > 0) {
-			microsleep(mspc + (DEADBEEF_UNIFORM(0.0, 62.5)));
+			microsleep(mspc + (DEADBEEF_UNIFORM(0.0, 0.5)));
 		}
 	}
 }

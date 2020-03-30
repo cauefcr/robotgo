@@ -16,9 +16,9 @@ import (
 	"errors"
 	"log"
 
-	"github.com/BurntSushi/xgb/xproto"
-	"github.com/BurntSushi/xgbutil"
-	"github.com/BurntSushi/xgbutil/ewmh"
+	"github.com/robotn/xgb/xproto"
+	"github.com/robotn/xgbutil"
+	"github.com/robotn/xgbutil/ewmh"
 )
 
 var xu *xgbutil.XUtil
@@ -34,11 +34,29 @@ func GetBounds(pid int32, args ...int) (int, int, int, int) {
 
 	xid, err := GetXId(xu, pid)
 	if err != nil {
-		log.Println("GetXidFromPid errors is: ", err)
+		log.Println("GetXid from Pid errors is: ", err)
 		return 0, 0, 0, 0
 	}
 
 	return internalGetBounds(int32(xid), hwnd)
+}
+
+// internalGetTitle get the window title
+func internalGetTitle(pid int32, args ...int32) string {
+	var hwnd int32
+	if len(args) > 0 {
+		hwnd = args[0]
+
+		return cgetTitle(pid, hwnd)
+	}
+
+	xid, err := GetXId(xu, pid)
+	if err != nil {
+		log.Println("GetXid from Pid errors is: ", err)
+		return ""
+	}
+
+	return cgetTitle(int32(xid), hwnd)
 }
 
 // ActivePIDC active the window by PID,
@@ -54,7 +72,7 @@ func ActivePIDC(pid int32, args ...int) {
 
 	xid, err := GetXId(xu, pid)
 	if err != nil {
-		log.Println("GetXidFromPid errors is: ", err)
+		log.Println("GetXid from Pid errors is: ", err)
 		return
 	}
 
@@ -62,6 +80,7 @@ func ActivePIDC(pid int32, args ...int) {
 }
 
 // ActivePID active the window by PID,
+//
 // If args[0] > 0 on the Windows platform via a window handle to active,
 // If args[0] > 0 on the unix platform via a xid to active
 func ActivePID(pid int32, args ...int) error {
@@ -82,7 +101,7 @@ func ActivePID(pid int32, args ...int) error {
 		return nil
 	}
 
-	// get xid from pid
+	// get the xid from pid
 	xid, err := GetXidFromPid(xu, pid)
 	if err != nil {
 		return err
@@ -96,7 +115,7 @@ func ActivePID(pid int32, args ...int) error {
 	return nil
 }
 
-// GetXId get the xid
+// GetXId get the xid return window and error
 func GetXId(xu *xgbutil.XUtil, pid int32) (xproto.Window, error) {
 	if xu == nil {
 		var err error
@@ -123,6 +142,7 @@ func GetXidFromPid(xu *xgbutil.XUtil, pid int32) (xproto.Window, error) {
 		if err != nil {
 			return 0, err
 		}
+
 		if uint(pid) == wmPid {
 			return window, nil
 		}

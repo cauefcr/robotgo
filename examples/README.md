@@ -35,11 +35,11 @@ import (
 )
 
 func main() {
-  robotgo.TypeString("Hello World")
-  robotgo.TypeString("测试")
-  robotgo.TypeStr("测试")
-  ustr := uint32(robotgo.CharCodeAt("测试", 0))
-  robotgo.UnicodeType(ustr)
+  robotgo.TypeStr("Hello World")
+  // robotgo.TypeString("だんしゃり")
+  robotgo.TypeStr("だんしゃり")
+  // ustr := uint32(robotgo.CharCodeAt("だんしゃり", 0))
+  // robotgo.UnicodeType(ustr)
 
   robotgo.KeyTap("enter")
   robotgo.TypeString("en")
@@ -111,12 +111,12 @@ import (
 
 func main() {
   keve := robotgo.AddEvent("k")
-  if keve == 0 {
+  if keve {
     fmt.Println("you press...", "k")
   }
 
   mleft := robotgo.AddEvent("mleft")
-  if mleft == 0 {
+  if mleft {
     fmt.Println("you press...", "mouse left button")
   }
 } 

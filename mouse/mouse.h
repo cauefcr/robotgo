@@ -10,11 +10,13 @@
 #else
 	#include <stdbool.h>
 #endif
+
 #ifdef __cplusplus
 // #ifdefined(__cplusplus)||defined(c_plusplus)
 extern "C"
 {
 #endif
+
 #if defined(IS_MACOSX)
 
 	// #include </System/Library/Frameworks/ApplicationServices.framework/Headers/ApplicationServices.h>
@@ -63,24 +65,24 @@ typedef int MMMouseWheelDirection;
 /* Immediately moves the mouse to the given point on-screen.
  * It is up to the caller to ensure that this point is within the
  * screen boundaries. */
-void moveMouse(MMPoint point);
+void moveMouse(MMPointInt32 point);
 
 /* Like moveMouse, moves the mouse to the given point on-screen, but marks
  * the event as the mouse being dragged on platforms where it is supported.
  * It is up to the caller to ensure that this point is within the screen
  * boundaries. */
-void dragMouse(MMPoint point, const MMMouseButton button);
+void dragMouse(MMPointInt32 point, const MMMouseButton button);
 
 /* Smoothly moves the mouse from the current position to the given point.
  * deadbeef_srand() should be called before using this function.
  *
  * Returns false if unsuccessful (i.e. a point was hit that is outside of the
  * screen boundaries), or true if successful. */
-bool smoothlyMoveMouse(MMPoint endPoint, double lowSpeed, double highSpeed); 
+bool smoothlyMoveMouse(MMPointInt32 endPoint, double lowSpeed, double highSpeed);
 // bool smoothlyMoveMouse(MMPoint point);
 
 /* Returns the coordinates of the mouse on the current screen. */
-MMPoint getMousePos(void);
+MMPointInt32 getMousePos(void);
 
 /* Holds down or releases the mouse with the given button in the current
  * position. */
@@ -96,9 +98,9 @@ void doubleClick(MMMouseButton button);
  * TODO: Add a smoothly scroll mouse next. */
 void scrollMouse(int scrollMagnitude, MMMouseWheelDirection scrollDirection);
 
-#endif /* MOUSE_H */
-
 //#ifdefined(__cplusplus)||defined(c_plusplus)
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* MOUSE_H */

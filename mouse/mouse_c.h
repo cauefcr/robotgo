@@ -66,7 +66,7 @@
  * @param event The mouse move event (by ref).
  * @param point The new mouse x and y.
  */
-void calculateDeltas(CGEventRef *event, MMPoint point){
+void calculateDeltas(CGEventRef *event, MMPointInt32 point){
 	/**
 	 * The next few lines are a workaround for games not detecting mouse moves.
 	 * See this issue for more information:
@@ -91,10 +91,10 @@ void calculateDeltas(CGEventRef *event, MMPoint point){
  * Move the mouse to a specific point.
  * @param point The coordinates to move the mouse to (x, y).
  */
-void moveMouse(MMPoint point){
+void moveMouse(MMPointInt32 point){
 	#if defined(IS_MACOSX)
 		CGEventRef move = CGEventCreateMouseEvent(NULL, kCGEventMouseMoved,
-												CGPointFromMMPoint(point),
+												CGPointFromMMPointInt32(point),
 												kCGMouseButtonLeft);
 
 		calculateDeltas(&move, point);
@@ -105,18 +105,23 @@ void moveMouse(MMPoint point){
 		Display *display = XGetMainDisplay();
 		XWarpPointer(display, None, DefaultRootWindow(display),
 					0, 0, 0, 0, point.x, point.y);
+
 		XSync(display, false);
 	#elif defined(IS_WINDOWS)
-		//Mouse motion is now done using SendInput with MOUSEINPUT. We use Absolute mouse positioning
-		#define MOUSE_COORD_TO_ABS(coord, width_or_height) (((65536 * coord) / width_or_height) + (coord < 0 ? -1 : 1))
+		// Mouse motion is now done using SendInput with MOUSEINPUT.
+		// We use Absolute mouse positioning
+		#define MOUSE_COORD_TO_ABS(coord, width_or_height) ( \
+			((65536 * coord) / width_or_height) + (coord < 0 ? -1 : 1))
+
 		point.x = MOUSE_COORD_TO_ABS(point.x, GetSystemMetrics(SM_CXSCREEN));
 		point.y = MOUSE_COORD_TO_ABS(point.y, GetSystemMetrics(SM_CYSCREEN));
+
 		INPUT mouseInput;
 		mouseInput.type = INPUT_MOUSE;
 		mouseInput.mi.dx = point.x;
 		mouseInput.mi.dy = point.y;
 		mouseInput.mi.dwFlags = MOUSEEVENTF_ABSOLUTE | MOUSEEVENTF_MOVE;
-		mouseInput.mi.time = 0; //System will provide the timestamp
+		mouseInput.mi.time = 0;		// System will provide the timestamp
 		mouseInput.mi.dwExtraInfo = 0;
 		mouseInput.mi.mouseData = 0;
 		SendInput(1, &mouseInput, sizeof(mouseInput));
@@ -124,12 +129,12 @@ void moveMouse(MMPoint point){
 	#endif
 }
 
-void dragMouse(MMPoint point, const MMMouseButton button){
+void dragMouse(MMPointInt32 point, const MMMouseButton button){
 	#if defined(IS_MACOSX)
 		const CGEventType dragType = MMMouseDragToCGEventType(button);
 		CGEventRef drag = CGEventCreateMouseEvent(NULL, dragType,
-														CGPointFromMMPoint(point),
-														(CGMouseButton)button);
+						CGPointFromMMPoint(point), (CGMouseButton)button);
+
 		calculateDeltas(&drag, point);
 
 		CGEventPost(kCGSessionEventTap, drag);
@@ -139,13 +144,13 @@ void dragMouse(MMPoint point, const MMMouseButton button){
 	#endif
 }
 
-MMPoint getMousePos(){
+MMPointInt32 getMousePos(){
 	#if defined(IS_MACOSX)
 		CGEventRef event = CGEventCreate(NULL);
 		CGPoint point = CGEventGetLocation(event);
 		CFRelease(event);
 
-		return MMPointFromCGPoint(point);
+		return MMPointInt32FromCGPoint(point);
 	#elif defined(USE_X11)
 		int x, y; /* This is all we care about. Seriously. */
 		Window garb1, garb2; /* Why you can't specify NULL as a parameter */
@@ -156,12 +161,12 @@ MMPoint getMousePos(){
 		XQueryPointer(display, XDefaultRootWindow(display), &garb1, &garb2,
 					&x, &y, &garb_x, &garb_y, &more_garbage);
 
-		return MMPointMake(x, y);
+		return MMPointInt32Make(x, y);
 	#elif defined(IS_WINDOWS)
 		POINT point;
 		GetCursorPos(&point);
 
-		return MMPointFromPOINT(point);
+		return MMPointInt32FromPOINT(point);
 	#endif
 }
 
@@ -175,9 +180,8 @@ void toggleMouse(bool down, MMMouseButton button){
 		const CGPoint currentPos = CGPointFromMMPoint(getMousePos());
 		const CGEventType mouseType = MMMouseToCGEventType(down, button);
 		CGEventRef event = CGEventCreateMouseEvent(NULL,
-												mouseType,
-												currentPos,
-												(CGMouseButton)button);
+							mouseType, currentPos, (CGMouseButton)button);
+
 		CGEventPost(kCGSessionEventTap, event);
 		CFRelease(event);
 	#elif defined(USE_X11)
@@ -185,7 +189,18 @@ void toggleMouse(bool down, MMMouseButton button){
 		XTestFakeButtonEvent(display, button, down ? True : False, CurrentTime);
 		XSync(display, false);
 	#elif defined(IS_WINDOWS)
-		mouse_event(MMMouseToMEventF(down, button), 0, 0, 0, 0);
+		// mouse_event(MMMouseToMEventF(down, button), 0, 0, 0, 0);
+
+		INPUT mouseInput;
+
+		mouseInput.type = INPUT_MOUSE;
+		mouseInput.mi.dx = 0;
+		mouseInput.mi.dy = 0;
+		mouseInput.mi.dwFlags = MMMouseToMEventF(down, button);
+		mouseInput.mi.time = 0;
+		mouseInput.mi.dwExtraInfo = 0;
+		mouseInput.mi.mouseData = 0;
+		SendInput(1, &mouseInput, sizeof(mouseInput));
 	#endif
 }
 
@@ -206,7 +221,8 @@ void doubleClick(MMMouseButton button){
 		const CGEventType mouseTypeDown = MMMouseToCGEventType(true, button);
 		const CGEventType mouseTypeUP = MMMouseToCGEventType(false, button);
 
-		CGEventRef event = CGEventCreateMouseEvent(NULL, mouseTypeDown, currentPos, kCGMouseButtonLeft);
+		CGEventRef event = CGEventCreateMouseEvent(
+				NULL, mouseTypeDown, currentPos, kCGMouseButtonLeft);
 
 		/* Set event to double click. */
 		CGEventSetIntegerValueField(event, kCGMouseEventClickState, 2);
@@ -243,7 +259,7 @@ void scrollMouse(int scrollMagnitude, MMMouseWheelDirection scrollDirection){
 	/* Direction should only be considered based on the scrollDirection. This
 	 * Should not interfere. */
 	int cleanScrollMagnitude = abs(scrollMagnitude);
-	if (!(scrollDirection == DIRECTION_UP || scrollDirection == DIRECTION_DOWN)){
+	if (!(scrollDirection == DIRECTION_UP || scrollDirection == DIRECTION_DOWN)) {
 		return;
 	}
 
@@ -256,7 +272,9 @@ void scrollMouse(int scrollMagnitude, MMMouseWheelDirection scrollDirection){
 		/* Make scroll magnitude negative if we're scrolling down. */
 		cleanScrollMagnitude = cleanScrollMagnitude * scrollDirection;
 
-		event = CGEventCreateScrollWheelEvent(NULL, kCGScrollEventUnitLine, wheel, cleanScrollMagnitude, 0);
+		event = CGEventCreateScrollWheelEvent(NULL,
+				kCGScrollEventUnitLine, wheel, cleanScrollMagnitude, 0);
+
 		CGEventPost(kCGHIDEventTap, event);
 
 	#elif defined(USE_X11)
@@ -265,13 +283,11 @@ void scrollMouse(int scrollMagnitude, MMMouseWheelDirection scrollDirection){
 		int dir = 4; /* Button 4 is up, 5 is down. */
 		Display *display = XGetMainDisplay();
 
-		if (scrollDirection == DIRECTION_DOWN)
-		{
+		if (scrollDirection == DIRECTION_DOWN) {
 			dir = 5;
 		}
 
-		for (x = 0; x < cleanScrollMagnitude; x++)
-		{
+		for (x = 0; x < cleanScrollMagnitude; x++) {
 			XTestFakeButtonEvent(display, dir, 1, CurrentTime);
 			XTestFakeButtonEvent(display, dir, 0, CurrentTime);
 		}
@@ -320,10 +336,10 @@ void scrollMouseXY(int x, int y){
 		int xdir = 6;
 		Display *display = XGetMainDisplay();
 
-		if (y < 0){
+		if (y < 0) {
 			ydir = 5;
 		}
-		if (x < 0){
+		if (x < 0) {
 			xdir = 7;
 		}
 
@@ -386,16 +402,16 @@ static double crude_hypot(double x, double y){
 	return ((M_SQRT2 - 1.0) * small) + big;
 }
 
-bool smoothlyMoveMouse(MMPoint endPoint, double lowSpeed, double highSpeed){
-	MMPoint pos = getMousePos();
-	MMSize screenSize = getMainDisplaySize();
+bool smoothlyMoveMouse(MMPointInt32 endPoint, double lowSpeed, double highSpeed){
+	MMPointInt32 pos = getMousePos();
+	MMSizeInt32 screenSize = getMainDisplaySize();
 	double velo_x = 0.0, velo_y = 0.0;
 	double distance;
 
-	while ((distance = 
+	while ((distance =
 			crude_hypot((double)pos.x - endPoint.x, (double)pos.y - endPoint.y)
 		) > 1.0) {
-			
+
 		double gravity = DEADBEEF_UNIFORM(5.0, 500.0);
 		// double gravity = DEADBEEF_UNIFORM(lowSpeed, highSpeed);
 		double veloDistance;
@@ -412,7 +428,7 @@ bool smoothlyMoveMouse(MMPoint endPoint, double lowSpeed, double highSpeed){
 
 		/* Make sure we are in the screen boundaries!
 		 * (Strange things will happen if we are not.) */
-		if (pos.x >= screenSize.width || pos.y >= screenSize.height) {
+		if (pos.x >= screenSize.w || pos.y >= screenSize.h) {
 			return false;
 		}
 

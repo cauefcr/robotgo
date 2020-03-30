@@ -57,12 +57,13 @@ int showAlert(const char *title, const char *msg, const char *defaultButton,
 	                                            cancelButtonTitle,
 	                                            NULL,
 	                                            &responseFlags);
+												
 	if (alertHeader != NULL) CFRelease(alertHeader);
 	if (alertMessage != NULL) CFRelease(alertMessage);
 	if (defaultButtonTitle != NULL) CFRelease(defaultButtonTitle);
 	if (cancelButtonTitle != NULL) CFRelease(cancelButtonTitle);
 
-	if (err != 0) return -1;
+	if (err != 0) { return -1; }
 	return (responseFlags == kCFUserNotificationDefaultResponse) ? 0 : 1;
 #elif defined(USE_X11)
 	/* Note that args[0] is set by the xmessage() function. */
@@ -78,7 +79,7 @@ int showAlert(const char *title, const char *msg, const char *defaultButton,
 		asprintf(&buttonList, "%s:2,%s:3", defaultButton, cancelButton);
 	}
 
-	if (buttonList == NULL) return -1; /* asprintf() failed. */
+	if (buttonList == NULL) { return -1; /* asprintf() failed. */ }
 	args[5] = "-buttons";
 	args[6] = buttonList;
 	args[7] = "-default";
@@ -121,8 +122,7 @@ int showAlert(const char *title, const char *msg, const char *defaultButton,
  */
 static int runTask(const char *taskname, char * const argv[], int *exit_status);
 
-static int xmessage(char *argv[], int *exit_status)
-{
+static int xmessage(char *argv[], int *exit_status) {
 	// static const char * const MSG_PROGS[] = {"gmessage", "gxmessage",
 	//                                          "kmessage", "xmessage"};
 	static const char * const MSG_PROGS[] = {"xmessage"};
@@ -154,8 +154,7 @@ static int xmessage(char *argv[], int *exit_status)
 	return ret;
 }
 
-static int runTask(const char *taskname, char * const argv[], int *exit_status)
-{
+static int runTask(const char *taskname, char * const argv[], int *exit_status) {
 	pid_t pid = fork();
 	int status;
 
@@ -164,7 +163,7 @@ static int runTask(const char *taskname, char * const argv[], int *exit_status)
 			perror("fork");
 			return FORK_FAILED; /* Failed to fork. */
 		case 0: /* Child process */
-			if (strcmp(argv[0],"xmessage") == 0){
+			if (strcmp(argv[0], "xmessage") == 0){
 				execvp(taskname, argv);
 				perror("execvp failed");
 			}

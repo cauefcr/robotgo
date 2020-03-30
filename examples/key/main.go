@@ -17,62 +17,102 @@ import (
 	// "go-vgo/robotgo"
 )
 
+func typeStr() {
+	// importing "Hello World"
+	robotgo.TypeStr("Hello World!", 1.0)
+
+	robotgo.TypeStr("だんしゃり")
+	robotgo.MicroSleep(10.2)
+
+	robotgo.TypeStr("Hi galaxy. こんにちは世界.")
+	robotgo.Sleep(2)
+	// robotgo.TypeString("So, hi, bye!")
+	robotgo.MilliSleep(100)
+
+	ustr := uint32(robotgo.CharCodeAt("So, hi, bye!", 0))
+	robotgo.UnicodeType(ustr)
+
+	robotgo.PasteStr("paste string")
+}
+
+func keyTap() {
+	// press "enter"
+	robotgo.KeyTap("enter")
+	robotgo.KeyTap("a")
+	robotgo.MilliSleep(100)
+	robotgo.KeyTap("a", "ctrl")
+
+	// hide window
+	err := robotgo.KeyTap("h", "cmd")
+	if err != "" {
+		fmt.Println("robotgo.KeyTap run error is: ", err)
+	}
+
+	robotgo.KeyTap("h", "cmd", 12)
+
+	// press "i", "alt", "command" Key combination
+	robotgo.KeyTap("i", "alt", "command")
+	robotgo.KeyTap("i", "alt", "cmd", 11)
+
+	arr := []string{"alt", "cmd"}
+	robotgo.KeyTap("i", arr)
+	robotgo.KeyTap("i", arr, 12)
+
+	robotgo.KeyTap("i", "cmd", " alt", "shift")
+
+	// close window
+	robotgo.KeyTap("w", "cmd")
+
+	// minimize window
+	robotgo.KeyTap("m", "cmd")
+
+	robotgo.KeyTap("f1", "ctrl")
+	robotgo.KeyTap("a", "control")
+}
+
+func keyToggle() {
+	robotgo.KeyToggle("a", "down")
+	robotgo.KeyToggle("a", "down", "alt")
+	robotgo.Sleep(1)
+
+	robotgo.KeyToggle("a", "up", "alt", "cmd")
+	robotgo.MilliSleep(100)
+	robotgo.KeyToggle("q", "up", "alt", "cmd", "shift")
+
+	err := robotgo.KeyToggle("enter", "down")
+	if err != "" {
+		fmt.Println("robotgo.KeyToggle run error is: ", err)
+	}
+}
+
+func cilp() {
+	// robotgo.TypeString("en")
+
+	// write string to clipboard
+	e := robotgo.WriteAll("テストする")
+	if e != nil {
+		fmt.Println("robotgo.WriteAll err is: ", e)
+	}
+
+	// read string from clipboard
+	text, err := robotgo.ReadAll()
+	if err != nil {
+		fmt.Println("robotgo.ReadAll err is: ", err)
+	}
+	fmt.Println(text)
+}
+
 func key() {
 	////////////////////////////////////////////////////////////////////////////////
 	// Control the keyboard
 	////////////////////////////////////////////////////////////////////////////////
 
-	// importing "Hello World"
-	robotgo.TypeString("Hello World")
+	typeStr()
 
-	robotgo.TypeString("留给真爱你的人")
-	robotgo.MicroSleep(1)
+	keyTap()
+	keyToggle()
 
-	robotgo.TypeStr("山达尔星新星军团, galaxy. こんにちは世界.")
-	robotgo.Sleep(1)
-	robotgo.TypeStr("所以, 你好, 再见")
-	robotgo.Sleep(1)
-
-	ustr := uint32(robotgo.CharCodeAt("所以, 你好, 再见", 0))
-	robotgo.UnicodeType(ustr)
-
-	robotgo.PasteStr(" 粘贴字符串, paste")
-
-	// press "enter"
-	robotgo.KeyTap("enter")
-	robotgo.KeyTap("a", "control")
-	// hide window
-	robotgo.KeyTap("h", "command")
-	robotgo.KeyTap("h", "command", 12)
-
-	// press "i", "alt", "command" Key combination
-	robotgo.KeyTap("i", "alt", "command")
-	robotgo.KeyTap("i", "alt", "command", 11)
-	arr := []string{"alt", "command"}
-	robotgo.KeyTap("i", arr)
-	robotgo.KeyTap("i", arr, 12)
-
-	// close window
-	robotgo.KeyTap("w", "command")
-	// minimize window
-	robotgo.KeyTap("m", "command")
-	robotgo.KeyTap("f1", "control")
-	robotgo.KeyTap("a", "control")
-
-	robotgo.KeyToggle("a", "down")
-	robotgo.KeyToggle("a", "down", "alt")
-	robotgo.KeyToggle("a", "down", "alt", "command")
-	robotgo.KeyToggle("enter", "down")
-
-	robotgo.TypeString("en")
-
-	// write string to clipboard
-	robotgo.WriteAll("测试")
-	// read string from clipboard
-	text, err := robotgo.ReadAll()
-	if err == nil {
-		fmt.Println(text)
-	}
+	cilp()
 }
 
 func main() {

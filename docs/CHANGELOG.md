@@ -1,9 +1,193 @@
 # CHANGELOG
 
 <!--### RobotGo-->
-# ## RobotGo v0.50.0, The Appalachian Mountains
 
-## Add  
+## RobotGo v0.80.0, Sierra Nevada
+
+# Sierra Nevada
+
+### Add  
+
+- [NEW] Add asynchronous event support
+- [NEW] Add multiple keypress event listener support
+- [NEW] Add hook start and end func
+- [NEW] Add AddEvents, AddMouse, AddMousePos hook function
+- [NEW] Add mul() scale func and optimize code
+- [NEW] Refactor AddEvent() func and add keycode.go, update example
+- [NEW] Add mouse map keycode
+- [NEW] Add android null file
+- [NEW] Add AddEvent "center" support
+- [NEW] Update README.md, Add binding link
+
+ <br/>
+
+- [NEW] Format README.md and docs markdown
+- [NEW] Update bitmap_save return code
+- [NEW] Optimize code not defer and remove useless code
+- [NEW] Update code style and godoc
+- [NEW] Update go mod vendor
+- [NEW] Add more event examples
+- [NEW] add AddEvents, AddMouse, AddMousePos examples code
+
+
+### Update
+
+- [NEW] Update event example code add print hint
+- [NEW] Update godoc
+- [NEW] Update CHANGELOG.md
+- [NEW] Update .gitignore
+- [NEW] Update code style and examples
+- [NEW] Update pkg to newest
+- [NEW] Update CI add go1.12.x support
+- [NEW] Move GetText() func code
+
+### Fix
+
+- [FIX] Add AddEvents func, Fixed #98, #61, #69...
+- [FIX] Add asynchronous event support, Fixed #196, #89...
+- [FIX] add AddMouse func, Fixed #138 
+- [FIX] Update _Ctype_char to C.char, Fixed go1.12 build error #191
+- [FIX] Update hook, Fixed #195 warning and json break bug
+- [FIX] Fixed color picker, Update README.md and docs
+
+
+See Commits for more details, after Jan 7.
+
+
+## RobotGo v0.70.0, Caloris Montes
+
+# Caloris Montes
+
+### Add
+
+- [NEW] Update keyboard use sendInput not keybd_event
+- [NEW] Update mouse use sendInput not mouse_event
+- [NEW] Add drag mouse other button support
+- [NEW] Add more numpad key support
+- [NEW] Add numpad key and escape abbreviation support
+- [NEW] Add new window10 zoom ratio
+- [NEW] Add linux numpad key support
+- [NEW] Add key "insert, printscreen" mac support
+- [NEW] Add check mouse button func
+- [NEW] Add keyTap run error return support and update godoc
+
+
+ <br/>
+
+- [NEW] Optimize and clearer keytap code
+- [NEW] Optimize and clean keyToggle code
+- [NEW] Update dockerfile clean image
+- [NEW] Add color picker and getMousePos() example
+- [NEW] Use go mod not dep, add go.mod remove dep files
+- [NEW] Add GetColors func return string
+- [NEW] Optimize defer code
+<br/>
+
+- [NEW] Add more godoc
+- [NEW] Add add key "ctrl", "cmd" [ abbreviation ] support
+- [NEW] Add add key "capslock", "numpad_lock" support
+- [NEW] Add left and right "Ctrl, Shift, Alt, command" key support
+- [NEW] Update check key flags support "cmd" and "ctrl"
+- [NEW] Update key docs
+- [NEW] Add millisleep func and update godoc
+- [NEW] Add AddEvent() key "cmd" support
+- [NEW] Update key example code
+- [NEW] Update README.md, add Note go1.10.x issue
+- [NEW] Update keytap and toggle return "" and code style
+
+
+### Update
+
+- [NEW] Update issue template more obvious
+- [NEW] Update godoc
+- [NEW] Update CHANGELOG.md
+- [NEW] Update .gitignore
+- [NEW] Update code style and examples
+- [NEW] Update pkg to newest
+- [NEW] Add more scale example
+- [NEW] Add drag mouse example
+<br/>
+
+- [NEW] Update key docs and clear file name
+- [NEW] Remove old useless code
+- [NEW] Update README.md
+- [NEW] Update CI add go1.11.4 version
+
+### Fix
+
+- [FIX] Fixed bitmapClick() parameter bug
+- [FIX] Fixed some README.md typo
+- [FIX] Update scale example code close #153
+- [FIX] Update code style and fixed #endif error
+
+
+See Commits for more details, after Otc 8.
+
+
+## RobotGo v0.60.0, Mount Olympus: Mytikas
+
+### Add
+
+- [NEW] Add GetBounds func support (add get_client and get_frame C_func)
+- [NEW] Add GetXId and GetXidFromPid func
+- [NEW] Refactoring GetTitle() func allow by pid
+- [NEW] Refactoring CloseWindow() allow by pid
+- [NEW] Add SetHandPid() and GetHandPid() func support
+- [NEW] Add FindCBitmap func support
+ <br/>
+
+- [NEW] Refactoring bitmap example code
+- [NEW] Refactoring key example code
+- [NEW] Refactoring window example code
+- [NEW] Add an cbitmap example [#169]
+- [NEW] Refactoring screen and event example code
+- [NEW] Refactoring mouse example code
+<br/>
+
+- [NEW] Add more godoc
+- [NEW] Add getTitle example by pid
+- [NEW] Add close window example by pid
+- [NEW] Add getBounds example
+- [NEW] Split func and remove dep more clean
+- [NEW] Simplify SaveCapture code
+- [NEW] Update and merged get_pixel_color remove duplicate code
+- [NEW] Update README.md, add Note go1.10.x
+
+
+### Update
+
+- [NEW] Update issue template more obvious
+- [NEW] Move public mdata to pub
+- [NEW] Update godoc
+- [NEW] Update CHANGELOG.md
+- [NEW] Move some pub method to pub.h and rename some c_func
+- [NEW] Update code style and name style ( key, window and other )
+- [NEW] Update robotgo unix export getXidFromPid func
+- [NEW] Update set handle return use bool
+<br/>
+
+- [NEW] Update code style and move scale to win_sys.h
+- [NEW] Update example add more lang
+- [NEW] Update pkg to newest
+- [NEW] Remove duplicate code and old useless code
+- [NEW] Update and clean README.md
+- [NEW] Update CI add go1.11.x version
+- [NEW] Update scroll godoc and clearer parameter name
+- [NEW] Update hint and code style
+- [NEW] Update FindIds doc and only set name once in loop
+
+### Fix
+
+- [FIX] Update type_string fixed #155, fixed window missing  some character
+- [FIX] Fixed GetWindowText return address of local variable and not use ternary operator ( GetTittle )
+- [FIX] Update README.md Fixed Release badge
+
+See Commits for more details, after Aug 8.
+
+
+## RobotGo v0.50.0, The Appalachian Mountains
+
+## Add
 
 - [NEW] Add simple ocr support
 - [NEW] Add max and min window api and win32.h file
@@ -15,7 +199,7 @@
 - [NEW] Add GetForegroundWindow and FindWindow func support
 - [NEW] Add bitmap to CBitmap func, Add ToCBitmap example to examples
 - [NEW] Add get Scale and GetScaleSize func, get primary display DPI scale factor fix #129, #135
-   Add Custom DPI Scaling support, 
+   Add Custom DPI Scaling support,
    Add scale default value,
    Add scale example
 
@@ -62,7 +246,7 @@ See Commits for more details, after Apr 30.
 
 ## RobotGo v0.49.0, Olympus Mons
 
-### Add  
+### Add
 
 - [NEW] Add get image size func
 - [NEW] Add linux type string utf-8 support
@@ -105,7 +289,7 @@ See Commits for more details, after Jan 25.
 
 ## RobotGo v0.48.0, Ben Nevis
 
-### Add  
+### Add
 
 - [NEW] Add active window by name func ActiveName
 - [NEW] Add type string utf-8 support
@@ -140,7 +324,7 @@ Add func ToMMRGBHex, U32ToHex, U8ToHex, PadHex, HexToRgb, RgbToHex and examples
 - [NEW] Update godoc
 - [NEW] Update CHANGELOG.md
 - [NEW] Change TostringBitmap return string
-- [NEW] Update C language code and other naming 
+- [NEW] Update C language code and other naming
 - [NEW] Update code and code style
 - [NEW] Update move mouse smooth
 
@@ -148,7 +332,7 @@ Add func ToMMRGBHex, U32ToHex, U8ToHex, PadHex, HexToRgb, RgbToHex and examples
 ### Fix
 
 - [FIX] Fix mac set active and active by pid
-- [FIX] Fix windows active by pid #101 
+- [FIX] Fix windows active by pid #101
 - [FIX] Fix FindColor param tolerance
 - [FIX] Fix find bitmap float args
 - [FIX] Fix some range error
@@ -159,7 +343,7 @@ See Commits for more details, after Dec 13.
 
 ## RobotGo v0.47.0, Mount Cook
 
-### Add  
+### Add
 
 - [NEW] Add windows 32bit and 64bit dependency
 - [NEW] Add macOs dependency
@@ -171,7 +355,7 @@ Solve the problem of dependence, remove zlib/libpng dependencies
 - [NEW] Add kill the process
 - [NEW] Add public event and update code
 - [NEW] Add  Windows 32bit and 64bit Appveyor CI
- 
+
 
 ### Update
 - [NEW] Update png io
@@ -259,7 +443,7 @@ See Commits for more details, after Nov 10.
 ### Add
 
 - Add CHANGELOG.md
-- Format some code	
+- Format some code
 - Add fedora dependencies
 
 ### Update
@@ -274,6 +458,6 @@ See Commits for more details, after Nov 10.
 ### Fix
 
 - Fix typesetting and MD error
-- Fix fedora dependencies #55 
+- Fix fedora dependencies #55
 - Fix doc.md and README.md
 

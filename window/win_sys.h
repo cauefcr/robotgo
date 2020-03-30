@@ -1,3 +1,13 @@
+// Copyright 2016 The go-vgo Project Developers. See the COPYRIGHT
+// file at the top-level directory of this distribution and at
+// https://github.com/go-vgo/robotgo/blob/master/LICENSE
+//
+// Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
+// http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
+// <LICENSE-MIT or http://opensource.org/licenses/MIT>, at your
+// option. This file may not be copied, modified, or distributed
+// except according to those terms.
+
 // #include "../base/os.h"
 
 Bounds get_client(uintptr pid, uintptr isHwnd);
@@ -15,6 +25,37 @@ intptr scaleX(){
 		// intptr verticalDPI = GetDeviceCaps(desktopDc, LOGPIXELSY);
 		return horizontalDPI;
 	#endif
+}
+
+double sys_scale() {
+	#if defined(IS_MACOSX)
+	
+		CGDirectDisplayID displayID = CGMainDisplayID();
+		CGDisplayModeRef modeRef = CGDisplayCopyDisplayMode(displayID);
+
+		double pixelWidth = CGDisplayModeGetPixelWidth(modeRef);
+		double targetWidth = CGDisplayModeGetWidth(modeRef);
+		
+		return pixelWidth / targetWidth;
+	#elif defined(USE_X11)
+		
+		double xres;
+		Display *dpy;
+
+		char *displayname = NULL;
+		int scr = 0; /* Screen number */
+
+		dpy = XOpenDisplay (displayname);
+		xres = ((((double) DisplayWidth(dpy, scr)) * 25.4) /
+			((double) DisplayWidthMM(dpy, scr)));
+
+   		XCloseDisplay (dpy);
+
+   		return xres + 0.5;
+   	#elif defined(IS_WINDOWS)
+   		double s = scaleX() / 96.0;
+   		return s;
+   	#endif
 }
 
 intptr scaleY(){

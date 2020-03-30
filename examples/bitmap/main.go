@@ -19,19 +19,8 @@ import (
 	// "go-vgo/robotgo"
 )
 
-func bitmap() {
-	////////////////////////////////////////////////////////////////////////////////
-	// Bitmap
-	////////////////////////////////////////////////////////////////////////////////
-
-	// gets all of the screen
-	abitMap := robotgo.CaptureScreen()
-	fmt.Println("abitMap...", abitMap)
-
-	// gets part of the screen
-	bitmap := robotgo.CaptureScreen(100, 200, 30, 40)
-	defer robotgo.FreeBitmap(bitmap)
-	fmt.Println("CaptureScreen...", bitmap)
+func toBitmap(bmp robotgo.CBitmap) {
+	bitmap := robotgo.ToMMBitmapRef(bmp)
 
 	gbit := robotgo.ToBitmap(bitmap)
 	fmt.Println("go bitmap", gbit, gbit.Width)
@@ -40,6 +29,10 @@ func bitmap() {
 	// defer robotgo.FreeBitmap(cbit)
 	log.Println("cbit == bitmap: ", cbit == bitmap)
 	robotgo.SaveBitmap(cbit, "tocbitmap.png")
+}
+
+func findColor(bmp robotgo.CBitmap) {
+	bitmap := robotgo.ToMMBitmapRef(bmp)
 
 	// find the color in bitmap
 	color := robotgo.GetColor(bitmap, 1, 2)
@@ -51,6 +44,9 @@ func bitmap() {
 
 	cx, cy = robotgo.FindColor(0xAADCDC, bitmap)
 	fmt.Println("pos...", cx, cy)
+	cx, cy = robotgo.FindColor(0xAADCDC, nil, 0.1)
+	fmt.Println("pos...", cx, cy)
+
 	cx, cy = robotgo.FindColorCS(0xAADCDC, 388, 179, 300, 300)
 	fmt.Println("pos...", cx, cy)
 
@@ -58,22 +54,26 @@ func bitmap() {
 	fmt.Println("count...", cnt)
 	cnt1 := robotgo.CountColorCS(0xAADCDC, 10, 20, 30, 40)
 	fmt.Println("count...", cnt1)
+}
 
-	count := robotgo.CountBitmap(abitMap, bitmap)
-	fmt.Println("count...", count)
+func bitmapString(bmp robotgo.CBitmap) {
+	bitmap := robotgo.ToMMBitmapRef(bmp)
 
-	bit := robotgo.CaptureScreen(1, 2, 40, 40)
-	defer robotgo.FreeBitmap(bit)
-	fmt.Println("CaptureScreen...", bit)
+	// creates bitmap from string by bitmap
+	bitstr := robotgo.TostringBitmap(bitmap)
+	fmt.Println("bitstr...", bitstr)
 
-	// searches for needle in bitmap
-	fx, fy := robotgo.FindBitmap(bit, bitmap)
-	fmt.Println("FindBitmap------", fx, fy)
-	// fx, fy := robotgo.FindBit(bitmap)
-	// fmt.Println("FindBitmap------", fx, fy)
+	// sbitmap := robotgo.BitmapFromstring(bitstr, 2)
+	// fmt.Println("...", sbitmap)
 
-	fx, fy = robotgo.FindBitmap(bit)
-	fmt.Println("FindBitmap------", fx, fy)
+	// sbitmap := robotgo.BitmapStr(bitstr)
+	sbitmap := robotgo.BitmapFromStr(bitstr)
+	fmt.Println("bitmap str...", sbitmap)
+	robotgo.SaveBitmap(sbitmap, "teststr.png")
+}
+
+func bitmapTool(bmp robotgo.CBitmap) {
+	bitmap := robotgo.ToMMBitmapRef(bmp)
 
 	// bitmap := robotgo.CaptureScreen(10, 20, 30, 40)
 	abool := robotgo.PointInBounds(bitmap, 1, 2)
@@ -83,20 +83,12 @@ func bitmap() {
 	bitpos := robotgo.GetPortion(bitmap, 10, 10, 11, 10)
 	fmt.Println(bitpos)
 
-	// creates bitmap from string by bitmap
-	bitstr := robotgo.TostringBitmap(bitmap)
-	fmt.Println("bitstr...", bitstr)
-
-	// sbitmap := robotgo.BitmapFromstring(bitstr, 2)
-	// fmt.Println("...", sbitmap)
-	sbitmap := robotgo.BitmapStr(bitstr)
-	fmt.Println("bitmap str...", sbitmap)
-	robotgo.SaveBitmap(sbitmap, "teststr.png")
-
 	// saves image to absolute filepath in the given format
 	robotgo.SaveBitmap(bitmap, "test.png")
 	robotgo.SaveBitmap(bitmap, "test31.tif", 1)
+}
 
+func decode() {
 	img, name, err := robotgo.DecodeImg("test.png")
 	if err != nil {
 		log.Println("decode image ", err)
@@ -113,6 +105,34 @@ func bitmap() {
 
 	// convert image
 	robotgo.Convert("test.png", "test.tif")
+}
+
+func bitmapTest(bmp robotgo.CBitmap) {
+	bitmap := robotgo.ToMMBitmapRef(bmp)
+
+	bit := robotgo.CaptureScreen(1, 2, 40, 40)
+	defer robotgo.FreeBitmap(bit)
+	fmt.Println("CaptureScreen...", bit)
+
+	// searches for needle in bitmap
+	fx, fy := robotgo.FindBitmap(bit, bitmap)
+	fmt.Println("FindBitmap------", fx, fy)
+
+	// fx, fy := robotgo.FindBit(bitmap)
+	// fmt.Println("FindBitmap------", fx, fy)
+
+	fx, fy = robotgo.FindBitmap(bit)
+	fmt.Println("FindBitmap------", fx, fy)
+}
+
+func findBitmap(bmp robotgo.CBitmap) {
+	fx, fy := robotgo.FindBitmap(robotgo.ToMMBitmapRef(bmp))
+	fmt.Println("findBitmap: ", fx, fy)
+
+	fx, fy = robotgo.FindCBitmap(bmp)
+	fmt.Println("findCBitmap: ", fx, fy)
+	fx, fy = robotgo.FindCBitmap(bmp, nil, 0.1)
+	fmt.Println("findCBitmap: ", fx, fy)
 
 	// open image bitmap
 	openbit := robotgo.OpenBitmap("test.tif")
@@ -123,6 +143,37 @@ func bitmap() {
 
 	fx, fy = robotgo.FindPic("test.tif")
 	fmt.Println("FindPic------", fx, fy)
+}
+
+func bitmap() {
+	////////////////////////////////////////////////////////////////////////////////
+	// Bitmap
+	////////////////////////////////////////////////////////////////////////////////
+
+	// gets all of the screen
+	abitMap := robotgo.CaptureScreen()
+	fmt.Println("abitMap...", abitMap)
+
+	// gets part of the screen
+	bitmap := robotgo.CaptureScreen(100, 200, 30, 30)
+	defer robotgo.FreeBitmap(bitmap)
+	fmt.Println("CaptureScreen...", bitmap)
+
+	cbit := robotgo.CBitmap(bitmap)
+	toBitmap(cbit)
+
+	findColor(cbit)
+
+	count := robotgo.CountBitmap(abitMap, bitmap)
+	fmt.Println("count...", count)
+
+	bitmapTest(cbit)
+	findBitmap(cbit)
+
+	bitmapString(cbit)
+	bitmapTool(cbit)
+
+	decode()
 
 	// free the bitmap
 	robotgo.FreeBitmap(abitMap)

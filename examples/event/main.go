@@ -17,38 +17,85 @@ import (
 	// "go-vgo/robotgo"
 )
 
-func event() {
-	////////////////////////////////////////////////////////////////////////////////
-	// Global event listener
-	////////////////////////////////////////////////////////////////////////////////
+func addEvent() {
+	fmt.Println("--- Please press ctrl + shift + q ---")
+	ok := robotgo.AddEvents("q", "ctrl", "shift")
+	if ok {
+		fmt.Println("add events...")
+	}
 
+	fmt.Println("--- Please press w---")
+	ok = robotgo.AddEvents("w")
+	if ok {
+		fmt.Println("add events")
+	}
+
+	// start hook
+	s := robotgo.Start()
+	// end hook
+	defer robotgo.End()
+
+	for ev := range s {
+		fmt.Println("hook: ", ev)
+	}
+}
+
+func addMouse() {
+	fmt.Println("--- Please press left mouse button ---")
+	ok := robotgo.AddMouse("left")
+	if ok {
+		fmt.Println("add mouse...")
+	}
+
+	fmt.Println("--- Please press left mouse button and move mosue to 100,100 ---")
+	ok = robotgo.AddMouse("left", 100, 100)
+	if ok {
+		fmt.Println("add mouse and move to 100,100 ...")
+	}
+
+	fmt.Println("--- Please move mosue to 100,100 ---")
+	ok = robotgo.AddMousePos(100, 100)
+	if ok {
+		fmt.Println(" move mouse to 100,100 ...")
+	}
+}
+
+func add() {
 	fmt.Println("--- Please press v---")
 	eve := robotgo.AddEvent("v")
 
-	if eve == 0 {
+	if eve {
 		fmt.Println("--- You press v---", "v")
 	}
 
 	fmt.Println("--- Please press k---")
 	keve := robotgo.AddEvent("k")
-	if keve == 0 {
+	if keve {
 		fmt.Println("--- You press k---", "k")
 	}
 
 	fmt.Println("--- Please press f1---")
 	feve := robotgo.AddEvent("f1")
-	if feve == 0 {
+	if feve {
 		fmt.Println("You press...", "f1")
 	}
+}
+
+func event() {
+	////////////////////////////////////////////////////////////////////////////////
+	// Global event listener
+	////////////////////////////////////////////////////////////////////////////////
+
+	add()
 
 	fmt.Println("--- Please press left mouse button---")
 	mleft := robotgo.AddEvent("mleft")
-	if mleft == 0 {
+	if mleft {
 		fmt.Println("--- You press left mouse button---", "mleft")
 	}
 
 	mright := robotgo.AddEvent("mright")
-	if mright == 0 {
+	if mright {
 		fmt.Println("--- You press right mouse button---", "mright")
 	}
 
@@ -57,5 +104,11 @@ func event() {
 }
 
 func main() {
+	fmt.Println("test begin...")
+
+	addEvent()
+
+	addMouse()
+
 	event()
 }

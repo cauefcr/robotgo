@@ -24,7 +24,7 @@ package robotgo
 
 /*
 //#if defined(IS_MACOSX)
-	#cgo darwin CFLAGS: -x objective-c  -Wno-deprecated-declarations
+	#cgo darwin CFLAGS: -x objective-c -Wno-deprecated-declarations
 	#cgo darwin LDFLAGS: -framework Cocoa -framework OpenGL -framework IOKit
 	#cgo darwin LDFLAGS: -framework Carbon -framework CoreFoundation
 	#cgo darwin LDFLAGS:-L${SRCDIR}/cdeps/mac -lpng -lz
@@ -32,6 +32,7 @@ package robotgo
 	// Drop -std=c11
 	#cgo linux CFLAGS: -I/usr/src
 	#cgo linux LDFLAGS: -L/usr/src -lpng -lz -lX11 -lXtst -lm
+	// #cgo linux LDFLAGS: -lX11-xcb -lxcb -lxcb-xkb -lxkbcommon -lxkbcommon-x11
 //#endif
 	// #cgo windows LDFLAGS: -lgdi32 -luser32 -lpng -lz
 	#cgo windows LDFLAGS: -lgdi32 -luser32
@@ -50,25 +51,26 @@ import "C"
 import (
 	// "fmt"
 	"image"
-	"os"
+	// "os"
 	"reflect"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
 	"unsafe"
+
 	// "syscall"
 	"os/exec"
 
 	"github.com/go-vgo/robotgo/clipboard"
-	"github.com/robotn/gohook"
-	"github.com/shirou/gopsutil/process"
+	ps "github.com/vcaesar/gops"
 	"github.com/vcaesar/imgo"
+	"github.com/vcaesar/tt"
 )
 
 const (
 	// Version get the robotgo version
-	Version string = "v0.50.0.666, The Appalachian Mountains!"
+	Version = "v0.90.0.940, Sierra Nevada!"
 )
 
 // GetVersion get the robotgo version
@@ -79,19 +81,19 @@ func GetVersion() string {
 type (
 	// Map a map[string]interface{}
 	Map map[string]interface{}
-	// CHex c rgb Hex type
+	// CHex define CHex as c rgb Hex type (C.MMRGBHex)
 	CHex C.MMRGBHex
-	// CBitmap c bitmap type C.MMBitmapRef
+	// CBitmap define CBitmap as C.MMBitmapRef type
 	CBitmap C.MMBitmapRef
 )
 
 // Bitmap is Bitmap struct
 type Bitmap struct {
-	ImageBuffer   *uint8
+	ImgBuf        *uint8
 	Width         int
 	Height        int
 	Bytewidth     int
-	BitsPerPixel  uint8
+	BitsPixel     uint8
 	BytesPerPixel uint8
 }
 
@@ -111,8 +113,13 @@ func Try(fun func(), handler func(interface{})) {
 	fun()
 }
 
-// Sleep time.Sleep
-func Sleep(tm float64) {
+// MilliSleep sleep tm milli second
+func MilliSleep(tm int) {
+	time.Sleep(time.Duration(tm) * time.Millisecond)
+}
+
+// Sleep time.Sleep tm second
+func Sleep(tm int) {
 	time.Sleep(time.Duration(tm) * time.Second)
 }
 
@@ -140,6 +147,12 @@ func ToMMRGBHex(hex CHex) C.MMRGBHex {
 	return C.MMRGBHex(hex)
 }
 
+// UintToHex trans uint32 to robotgo.CHex
+func UintToHex(u uint32) CHex {
+	hex := U32ToHex(C.uint32_t(u))
+	return CHex(hex)
+}
+
 // U32ToHex trans C.uint32_t to C.MMRGBHex
 func U32ToHex(hex C.uint32_t) C.MMRGBHex {
 	return C.MMRGBHex(hex)
@@ -154,7 +167,7 @@ func U8ToHex(hex *C.uint8_t) C.MMRGBHex {
 func PadHex(hex C.MMRGBHex) string {
 	color := C.pad_hex(hex)
 	gcolor := C.GoString(color)
-	defer C.free(unsafe.Pointer(color))
+	C.free(unsafe.Pointer(color))
 
 	return gcolor
 }
@@ -171,8 +184,8 @@ func RgbToHex(r, g, b uint8) C.uint32_t {
 
 // GetPxColor get pixel color return C.MMRGBHex
 func GetPxColor(x, y int) C.MMRGBHex {
-	cx := C.size_t(x)
-	cy := C.size_t(y)
+	cx := C.int32_t(x)
+	cy := C.int32_t(y)
 
 	color := C.get_px_color(cx, cy)
 	return color
@@ -180,19 +193,36 @@ func GetPxColor(x, y int) C.MMRGBHex {
 
 // GetPixelColor get pixel color return string
 func GetPixelColor(x, y int) string {
-	cx := C.size_t(x)
-	cy := C.size_t(y)
+	cx := C.int32_t(x)
+	cy := C.int32_t(y)
 
 	color := C.get_pixel_color(cx, cy)
 	gcolor := C.GoString(color)
-	defer C.free(unsafe.Pointer(color))
+	C.free(unsafe.Pointer(color))
 
 	return gcolor
+}
+
+// GetMouseColor get the mouse pos's color
+func GetMouseColor() string {
+	x, y := GetMousePos()
+	return GetPixelColor(x, y)
 }
 
 // ScaleX get primary display horizontal DPI scale factor
 func ScaleX() int {
 	return int(C.scale_x())
+}
+
+// SysScale get the sys scale
+func SysScale() float64 {
+	s := C.sys_scale()
+	return float64(s)
+}
+
+// Scaled x * sys-scale
+func Scaled(x int) int {
+	return int(float64(x) * SysScale())
 }
 
 // ScaleY get primary display vertical DPI scale factor
@@ -204,7 +234,7 @@ func ScaleY() int {
 func GetScreenSize() (int, int) {
 	size := C.get_screen_size()
 	// fmt.Println("...", size, size.width)
-	return int(size.width), int(size.height)
+	return int(size.w), int(size.h)
 }
 
 // Scale get the screen scale
@@ -215,7 +245,9 @@ func Scale() int {
 		96:  100,
 		120: 125,
 		144: 150,
+		168: 175,
 		192: 200,
+		216: 225,
 		// Custom DPI
 		240: 250,
 		288: 300,
@@ -227,6 +259,12 @@ func Scale() int {
 	return dpi[x]
 }
 
+// Mul mul the scale
+func Mul(x int) int {
+	s := Scale()
+	return x * s / 100
+}
+
 // GetScaleSize get the screen scale size
 func GetScaleSize() (int, int) {
 	x, y := GetScreenSize()
@@ -234,21 +272,22 @@ func GetScaleSize() (int, int) {
 	return x * s / 100, y * s / 100
 }
 
-// SetXDisplayName set XDisplay name
+// SetXDisplayName set XDisplay name (Linux)
 func SetXDisplayName(name string) string {
 	cname := C.CString(name)
 	str := C.set_XDisplay_name(cname)
+
 	gstr := C.GoString(str)
-	defer C.free(unsafe.Pointer(cname))
+	C.free(unsafe.Pointer(cname))
 
 	return gstr
 }
 
-// GetXDisplayName get XDisplay name
+// GetXDisplayName get XDisplay name (Linux)
 func GetXDisplayName() string {
 	name := C.get_XDisplay_name()
 	gname := C.GoString(name)
-	defer C.free(unsafe.Pointer(name))
+	C.free(unsafe.Pointer(name))
 
 	return gname
 }
@@ -258,38 +297,30 @@ func GetXDisplayName() string {
 //
 // robotgo.CaptureScreen(x, y, w, h int)
 func CaptureScreen(args ...int) C.MMBitmapRef {
-	var x, y, w, h C.size_t
+	var x, y, w, h C.int32_t
 
 	if len(args) > 3 {
-		x = C.size_t(args[0])
-		y = C.size_t(args[1])
-		w = C.size_t(args[2])
-		h = C.size_t(args[3])
+		x = C.int32_t(args[0])
+		y = C.int32_t(args[1])
+		w = C.int32_t(args[2])
+		h = C.int32_t(args[3])
 	} else {
-		// fmt.Println("err:::", e)
 		x = 0
 		y = 0
 		// Get screen size.
-		var displaySize C.MMSize
+		var displaySize C.MMSizeInt32
 		displaySize = C.getMainDisplaySize()
-		w = displaySize.width
-		h = displaySize.height
+		w = displaySize.w
+		h = displaySize.h
 	}
 
 	bit := C.capture_screen(x, y, w, h)
-	// fmt.Println("...", bit.width)
 	return bit
 }
 
 // GoCaptureScreen capture the screen and return bitmap(go struct)
 func GoCaptureScreen(args ...int) Bitmap {
-	var bit C.MMBitmapRef
-
-	if len(args) > 3 {
-		bit = CaptureScreen(args[0], args[1], args[2], args[3])
-	} else {
-		bit = CaptureScreen()
-	}
+	bit := CaptureScreen(args...)
 	defer FreeBitmap(bit)
 
 	return ToBitmap(bit)
@@ -297,19 +328,7 @@ func GoCaptureScreen(args ...int) Bitmap {
 
 // SaveCapture capture screen and save
 func SaveCapture(spath string, args ...int) {
-	var bit C.MMBitmapRef
-	if len(args) > 3 {
-		var (
-			x = args[0]
-			y = args[1]
-			w = args[2]
-			h = args[3]
-		)
-
-		bit = CaptureScreen(x, y, w, h)
-	} else {
-		bit = CaptureScreen()
-	}
+	bit := CaptureScreen(args...)
 
 	SaveBitmap(bit, spath)
 	FreeBitmap(bit)
@@ -325,6 +344,24 @@ func SaveCapture(spath string, args ...int) {
 
 */
 
+// CheckMouse check the mouse button
+func CheckMouse(btn string) C.MMMouseButton {
+	// button = args[0].(C.MMMouseButton)
+	if btn == "left" {
+		return C.LEFT_BUTTON
+	}
+
+	if btn == "center" {
+		return C.CENTER_BUTTON
+	}
+
+	if btn == "right" {
+		return C.RIGHT_BUTTON
+	}
+
+	return C.LEFT_BUTTON
+}
+
 // MoveMouse move the mouse
 func MoveMouse(x, y int) {
 	// C.size_t  int
@@ -333,21 +370,35 @@ func MoveMouse(x, y int) {
 
 // Move move the mouse
 func Move(x, y int) {
-	cx := C.size_t(x)
-	cy := C.size_t(y)
+	cx := C.int32_t(x)
+	cy := C.int32_t(y)
 	C.move_mouse(cx, cy)
 }
 
 // DragMouse drag the mouse
-func DragMouse(x, y int) {
-	Drag(x, y)
+func DragMouse(x, y int, args ...string) {
+	Drag(x, y, args...)
 }
 
 // Drag drag the mouse
-func Drag(x, y int) {
-	cx := C.size_t(x)
-	cy := C.size_t(y)
-	C.drag_mouse(cx, cy)
+func Drag(x, y int, args ...string) {
+	var button C.MMMouseButton = C.LEFT_BUTTON
+
+	cx := C.int32_t(x)
+	cy := C.int32_t(y)
+
+	if len(args) > 0 {
+		button = CheckMouse(args[0])
+	}
+
+	C.drag_mouse(cx, cy, button)
+}
+
+// DragSmooth drag the mouse smooth
+func DragSmooth(x, y int, args ...interface{}) {
+	MouseToggle("down")
+	MoveSmooth(x, y, args...)
+	MouseToggle("up")
 }
 
 // MoveMouseSmooth move the mouse smooth,
@@ -361,8 +412,8 @@ func MoveMouseSmooth(x, y int, args ...interface{}) bool {
 //
 // robotgo.MoveSmooth(x, y int, low, high float64, mouseDelay int)
 func MoveSmooth(x, y int, args ...interface{}) bool {
-	cx := C.size_t(x)
-	cy := C.size_t(y)
+	cx := C.int32_t(x)
+	cy := C.int32_t(y)
 
 	var (
 		mouseDelay = 10
@@ -387,13 +438,33 @@ func MoveSmooth(x, y int, args ...interface{}) bool {
 	return bool(cbool)
 }
 
+// MoveArgs move mose relative args
+func MoveArgs(x, y int) (int, int) {
+	mx, my := GetMousePos()
+	mx = mx + x
+	my = my + y
+
+	return mx, my
+}
+
+// MoveRelative move mose relative
+func MoveRelative(x, y int) {
+	Move(MoveArgs(x, y))
+}
+
+// MoveSmoothRelative move mose smooth relative
+func MoveSmoothRelative(x, y int, args ...interface{}) {
+	mx, my := MoveArgs(x, y)
+	MoveSmooth(mx, my, args...)
+}
+
 // GetMousePos get mouse's portion
 func GetMousePos() (int, int) {
 	pos := C.get_mouse_pos()
-	// fmt.Println("pos:###", pos, pos.x, pos.y)
+
 	x := int(pos.x)
 	y := int(pos.y)
-	// return pos.x, pos.y
+
 	return x, y
 }
 
@@ -414,16 +485,7 @@ func Click(args ...interface{}) {
 	)
 
 	if len(args) > 0 {
-		// button = args[0].(C.MMMouseButton)
-		if args[0].(string) == "left" {
-			button = C.LEFT_BUTTON
-		}
-		if args[0].(string) == "center" {
-			button = C.CENTER_BUTTON
-		}
-		if args[0].(string) == "right" {
-			button = C.RIGHT_BUTTON
-		}
+		button = CheckMouse(args[0].(string))
 	}
 
 	if len(args) > 1 {
@@ -448,31 +510,18 @@ func MovesClick(x, y int, args ...interface{}) {
 }
 
 // MouseToggle toggle the mouse
-func MouseToggle(togKey string, args ...interface{}) {
+func MouseToggle(togKey string, args ...interface{}) int {
 	var button C.MMMouseButton = C.LEFT_BUTTON
 
 	if len(args) > 0 {
-		// button = args[1].(C.MMMouseButton)
-		if args[0].(string) == "left" {
-			button = C.LEFT_BUTTON
-		}
-		if args[0].(string) == "center" {
-			button = C.CENTER_BUTTON
-		}
-		if args[0].(string) == "right" {
-			button = C.RIGHT_BUTTON
-		}
+		button = CheckMouse(args[0].(string))
 	}
 
 	down := C.CString(togKey)
-	C.mouse_toggle(down, button)
-	defer C.free(unsafe.Pointer(down))
-}
+	i := C.mouse_toggle(down, button)
 
-// SetMouseDelay set mouse delay
-func SetMouseDelay(delay int) {
-	cdelay := C.size_t(delay)
-	C.set_mouse_delay(cdelay)
+	C.free(unsafe.Pointer(down))
+	return int(i)
 }
 
 // ScrollMouse scroll the mouse
@@ -481,7 +530,7 @@ func ScrollMouse(x int, direction string) {
 	cy := C.CString(direction)
 	C.scroll_mouse(cx, cy)
 
-	defer C.free(unsafe.Pointer(cy))
+	C.free(unsafe.Pointer(cy))
 }
 
 // Scroll scroll the mouse with x, y
@@ -500,6 +549,12 @@ func Scroll(x, y int, args ...int) {
 	C.scroll(cx, cy, cz)
 }
 
+// SetMouseDelay set mouse delay
+func SetMouseDelay(delay int) {
+	cdelay := C.size_t(delay)
+	C.set_mouse_delay(cdelay)
+}
+
 /*
  __  ___  ___________    ____ .______     ______        ___      .______       _______
 |  |/  / |   ____\   \  /   / |   _  \   /  __  \      /   \     |   _  \     |       \
@@ -510,11 +565,12 @@ func Scroll(x, y int, args ...int) {
 
 */
 
-// KeyTap tap the keyboard;
+// KeyTap tap the keyboard code;
 //
 // See keys:
 //	https://github.com/go-vgo/robotgo/blob/master/docs/keys.md
-func KeyTap(tapKey string, args ...interface{}) {
+//
+func KeyTap(tapKey string, args ...interface{}) string {
 	var (
 		akey     string
 		keyT     = "null"
@@ -523,13 +579,28 @@ func KeyTap(tapKey string, args ...interface{}) {
 		keyDelay = 10
 	)
 	// var ckeyArr []*C.char
-	ckeyArr := make([](*_Ctype_char), 0)
+	ckeyArr := make([](*C.char), 0)
 
-	Try(func() {
+	// zkey := C.CString(args[0])
+	zkey := C.CString(tapKey)
+	defer C.free(unsafe.Pointer(zkey))
+
+	if len(args) > 2 && (reflect.TypeOf(args[2]) != reflect.TypeOf(num)) {
+		num = len(args)
+		for i := 0; i < num; i++ {
+			s := args[i].(string)
+			ckeyArr = append(ckeyArr, (*C.char)(unsafe.Pointer(C.CString(s))))
+		}
+
+		str := C.key_Taps(zkey, (**C.char)(unsafe.Pointer(&ckeyArr[0])),
+			C.int(num), 0)
+		return C.GoString(str)
+	}
+
+	if len(args) > 0 {
 		if reflect.TypeOf(args[0]) == reflect.TypeOf(keyArr) {
 
 			keyArr = args[0].([]string)
-
 			num = len(keyArr)
 
 			for i := 0; i < num; i++ {
@@ -545,79 +616,86 @@ func KeyTap(tapKey string, args ...interface{}) {
 			if len(args) > 1 {
 				if reflect.TypeOf(args[1]) == reflect.TypeOf(akey) {
 					keyT = args[1].(string)
+					if len(args) > 2 {
+						keyDelay = args[2].(int)
+					}
 				} else {
 					keyDelay = args[1].(int)
 				}
 			}
 		}
 
-	}, func(e interface{}) {
-		// fmt.Println("err:::", e)
+	} else {
 		akey = "null"
 		keyArr = []string{"null"}
-	})
-	// }()
-
-	zkey := C.CString(tapKey)
-
-	if akey == "" && len(keyArr) != 0 {
-		C.key_Tap(zkey, (**_Ctype_char)(unsafe.Pointer(&ckeyArr[0])),
-			C.int(num), C.int(keyDelay))
-	} else {
-		// zkey := C.CString(args[0])
-		amod := C.CString(akey)
-		amodt := C.CString(keyT)
-
-		C.key_tap(zkey, amod, amodt, C.int(keyDelay))
-
-		defer C.free(unsafe.Pointer(amod))
-		defer C.free(unsafe.Pointer(amodt))
 	}
 
-	defer C.free(unsafe.Pointer(zkey))
+	if akey == "" && len(keyArr) != 0 {
+		str := C.key_Taps(zkey, (**C.char)(unsafe.Pointer(&ckeyArr[0])),
+			C.int(num), C.int(keyDelay))
+
+		return C.GoString(str)
+	}
+
+	amod := C.CString(akey)
+	amodt := C.CString(keyT)
+
+	str := C.key_tap(zkey, amod, amodt, C.int(keyDelay))
+
+	C.free(unsafe.Pointer(amod))
+	C.free(unsafe.Pointer(amodt))
+
+	return C.GoString(str)
 }
 
 // KeyToggle toggle the keyboard
 //
 // See keys:
 //	https://github.com/go-vgo/robotgo/blob/master/docs/keys.md
-func KeyToggle(args ...string) string {
+//
+func KeyToggle(key string, args ...string) string {
+	ckey := C.CString(key)
+	defer C.free(unsafe.Pointer(ckey))
+
+	ckeyArr := make([](*C.char), 0)
+	if len(args) > 3 {
+		num := len(args)
+
+		for i := 0; i < num; i++ {
+			ckeyArr = append(ckeyArr, (*C.char)(unsafe.Pointer(C.CString(args[i]))))
+		}
+
+		str := C.key_Toggles(ckey, (**C.char)(unsafe.Pointer(&ckeyArr[0])), C.int(num))
+		return C.GoString(str)
+	}
+
 	var (
-		adown, mKey, mKeyT string
+		down, mKey, mKeyT = "null", "null", "null"
 		// keyDelay = 10
 	)
 
-	if len(args) > 1 {
-		adown = args[1]
+	if len(args) > 0 {
+		down = args[0]
 
-		if len(args) > 2 {
-			mKey = args[2]
+		if len(args) > 1 {
+			mKey = args[1]
 
-			if len(args) > 3 {
-				mKeyT = args[3]
-			} else {
-				mKeyT = "null"
+			if len(args) > 2 {
+				mKeyT = args[2]
 			}
-		} else {
-			mKey = "null"
 		}
-	} else {
-		adown = "null"
 	}
 
-	ckey := C.CString(args[0])
-	cadown := C.CString(adown)
+	cdown := C.CString(down)
 	cmKey := C.CString(mKey)
 	cmKeyT := C.CString(mKeyT)
-	// defer func() {
-	str := C.key_toggle(ckey, cadown, cmKey, cmKeyT)
-	// str := C.key_Toggle(ckey, cadown, cmKey, cmKeyT, C.int(keyDelay))
-	// fmt.Println(str)
-	// }()
-	defer C.free(unsafe.Pointer(ckey))
-	defer C.free(unsafe.Pointer(cadown))
-	defer C.free(unsafe.Pointer(cmKey))
-	defer C.free(unsafe.Pointer(cmKeyT))
+
+	str := C.key_toggle(ckey, cdown, cmKey, cmKeyT)
+	// str := C.key_Toggle(ckey, cdown, cmKey, cmKeyT, C.int(keyDelay))
+
+	C.free(unsafe.Pointer(cdown))
+	C.free(unsafe.Pointer(cmKey))
+	C.free(unsafe.Pointer(cmKeyT))
 
 	return C.GoString(str)
 }
@@ -628,8 +706,8 @@ func ReadAll() (string, error) {
 }
 
 // WriteAll write string to clipboard
-func WriteAll(text string) {
-	clipboard.WriteAll(text)
+func WriteAll(text string) error {
+	return clipboard.WriteAll(text)
 }
 
 // CharCodeAt char code at utf-8
@@ -645,15 +723,21 @@ func CharCodeAt(s string, n int) rune {
 	return 0
 }
 
+// UnicodeType tap uint32 unicode
+func UnicodeType(str uint32) {
+	cstr := C.uint(str)
+	C.unicodeType(cstr)
+}
+
 func toUC(text string) []string {
 	var uc []string
 
-	textQuoted := strconv.QuoteToASCII(text)
-	textUnquoted := textQuoted[1 : len(textQuoted)-1]
+	for _, r := range text {
+		textQ := strconv.QuoteToASCII(string(r))
+		textUnQ := textQ[1 : len(textQ)-1]
 
-	strUnicodev := strings.Split(textUnquoted, "\\u")
-	for i := 1; i < len(strUnicodev); i++ {
-		uc = append(uc, "U"+strUnicodev[i])
+		st := strings.Replace(textUnQ, "\\u", "U", -1)
+		uc = append(uc, st)
 	}
 
 	return uc
@@ -663,22 +747,34 @@ func inputUTF(str string) {
 	cstr := C.CString(str)
 	C.input_utf(cstr)
 
-	defer C.free(unsafe.Pointer(cstr))
+	C.free(unsafe.Pointer(cstr))
 }
 
 // TypeStr send a string, support UTF-8
 //
-// robotgo.TypeStr(string: The string to send, float64: microsleep time)
+// robotgo.TypeStr(string: The string to send, float64: microsleep time, x11)
 func TypeStr(str string, args ...float64) {
-	var tm = 7.0
+	var tm, tm1 = 0.0, 7.0
+
 	if len(args) > 0 {
 		tm = args[0]
+	}
+	if len(args) > 1 {
+		tm1 = args[1]
 	}
 
 	if runtime.GOOS == "linux" {
 		strUc := toUC(str)
 		for i := 0; i < len(strUc); i++ {
-			inputUTF(strUc[i])
+			rstr := []rune(strUc[i])
+			if len(rstr) <= 1 {
+				ustr := uint32(CharCodeAt(strUc[i], 0))
+				UnicodeType(ustr)
+			} else {
+				inputUTF(strUc[i])
+				MicroSleep(tm1)
+			}
+
 			MicroSleep(tm)
 		}
 
@@ -690,47 +786,45 @@ func TypeStr(str string, args ...float64) {
 		UnicodeType(ustr)
 
 		// if len(args) > 0 {
-		// 	MicroSleep(tm)
+		MicroSleep(tm)
 		// }
 	}
 }
 
-// UnicodeType tap uint32 unicode
-func UnicodeType(str uint32) {
-	cstr := C.uint(str)
-	C.unicodeType(cstr)
+// PasteStr paste a string, support UTF-8
+func PasteStr(str string) string {
+	clipboard.WriteAll(str)
+	if runtime.GOOS == "darwin" {
+		return KeyTap("v", "command")
+	}
+
+	return KeyTap("v", "control")
 }
 
 // TypeString send a string, support unicode
-// TypeStr(string: The string to send)
-func TypeString(str string) {
+// TypeStr(string: The string to send), Wno-deprecated
+func TypeString(str string, delay ...int) {
+	tt.Drop("TypeString", "TypeStr")
+	var cdelay C.size_t
 	cstr := C.CString(str)
-	C.type_string(cstr)
-
-	defer C.free(unsafe.Pointer(cstr))
-}
-
-// PasteStr paste a string, support UTF-8
-func PasteStr(str string) {
-	clipboard.WriteAll(str)
-	if runtime.GOOS == "darwin" {
-		KeyTap("v", "command")
-	} else {
-		KeyTap("v", "control")
+	if len(delay) > 0 {
+		cdelay = C.size_t(delay[0])
 	}
+
+	C.type_string_delayed(cstr, cdelay)
+
+	C.free(unsafe.Pointer(cstr))
 }
 
 // TypeStrDelay type string delayed
 func TypeStrDelay(str string, delay int) {
-	cstr := C.CString(str)
-	cdelay := C.size_t(delay)
-	C.type_string_delayed(cstr, cdelay)
-
-	defer C.free(unsafe.Pointer(cstr))
+	TypeStr(str)
+	Sleep(delay)
 }
 
 // TypeStringDelayed type string delayed, Wno-deprecated
 func TypeStringDelayed(str string, delay int) {
+	tt.Drop("TypeStringDelayed", "TypeStrDelay")
 	TypeStrDelay(str, delay)
 }
 
@@ -739,9 +833,22 @@ func SetKeyDelay(delay int) {
 	C.set_keyboard_delay(C.size_t(delay))
 }
 
-// SetKeyboardDelay set keyboard delay, Wno-deprecated
+// SetKeyboardDelay set keyboard delay, Wno-deprecated,
+// this function will be removed in version v1.0.0
 func SetKeyboardDelay(delay int) {
-	C.set_keyboard_delay(C.size_t(delay))
+	tt.Drop("SetKeyboardDelay", "SetKeyDelay")
+	SetKeyDelay(delay)
+}
+
+// SetDelay set the key and mouse delay
+func SetDelay(d ...int) {
+	v := 10
+	if len(d) > 0 {
+		v = d[0]
+	}
+
+	SetMouseDelay(v)
+	SetKeyDelay(v)
 }
 
 /*
@@ -752,51 +859,6 @@ func SetKeyboardDelay(delay int) {
 |  |_)  | |  |     |  |     |  |  |  |  /  _____  \  |  |
 |______/  |__|     |__|     |__|  |__| /__/     \__\ | _|
 */
-
-// ToBitmap trans C.MMBitmapRef to Bitmap
-func ToBitmap(bit C.MMBitmapRef) Bitmap {
-	bitmap := Bitmap{
-		ImageBuffer:   (*uint8)(bit.imageBuffer),
-		Width:         int(bit.width),
-		Height:        int(bit.height),
-		Bytewidth:     int(bit.bytewidth),
-		BitsPerPixel:  uint8(bit.bitsPerPixel),
-		BytesPerPixel: uint8(bit.bytesPerPixel),
-	}
-
-	return bitmap
-}
-
-// ToCBitmap trans Bitmap to C.MMBitmapRef
-func ToCBitmap(bit Bitmap) C.MMBitmapRef {
-	cbitmap := C.createMMBitmap(
-		(*C.uint8_t)(bit.ImageBuffer),
-		C.size_t(bit.Width),
-		C.size_t(bit.Height),
-		C.size_t(bit.Bytewidth),
-		C.uint8_t(bit.BitsPerPixel),
-		C.uint8_t(bit.BytesPerPixel),
-	)
-
-	return cbitmap
-}
-
-// ToMMBitmapRef trans CBitmap to C.MMBitmapRef
-func ToMMBitmapRef(bit CBitmap) C.MMBitmapRef {
-	return C.MMBitmapRef(bit)
-}
-
-// TostringBitmap tostring bitmap to string
-func TostringBitmap(bit C.MMBitmapRef) string {
-	strBit := C.tostring_bitmap(bit)
-	return C.GoString(strBit)
-}
-
-// TocharBitmap tostring bitmap to C.char
-func TocharBitmap(bit C.MMBitmapRef) *C.char {
-	strBit := C.tostring_bitmap(bit)
-	return strBit
-}
 
 // GetText get the image text by tesseract ocr
 //
@@ -819,10 +881,73 @@ func GetText(imgPath string, args ...string) (string, error) {
 	return string(body), nil
 }
 
+// ToBitmap trans C.MMBitmapRef to Bitmap
+func ToBitmap(bit C.MMBitmapRef) Bitmap {
+	bitmap := Bitmap{
+		ImgBuf:        (*uint8)(bit.imageBuffer),
+		Width:         int(bit.width),
+		Height:        int(bit.height),
+		Bytewidth:     int(bit.bytewidth),
+		BitsPixel:     uint8(bit.bitsPerPixel),
+		BytesPerPixel: uint8(bit.bytesPerPixel),
+	}
+
+	return bitmap
+}
+
+// ToCBitmap trans Bitmap to C.MMBitmapRef
+func ToCBitmap(bit Bitmap) C.MMBitmapRef {
+	cbitmap := C.createMMBitmap(
+		(*C.uint8_t)(bit.ImgBuf),
+		C.size_t(bit.Width),
+		C.size_t(bit.Height),
+		C.size_t(bit.Bytewidth),
+		C.uint8_t(bit.BitsPixel),
+		C.uint8_t(bit.BytesPerPixel),
+	)
+
+	return cbitmap
+}
+
+// ToBitmapBytes saves Bitmap to bitmap format in bytes
+func ToBitmapBytes(bit C.MMBitmapRef) []byte {
+	var len C.size_t
+	ptr := C.saveMMBitmapAsBytes(bit, &len)
+	if int(len) < 0 {
+		return nil
+	}
+
+	bs := C.GoBytes(unsafe.Pointer(ptr), C.int(len))
+	C.free(unsafe.Pointer(ptr))
+	return bs
+}
+
+// ToMMBitmapRef trans CBitmap to C.MMBitmapRef
+func ToMMBitmapRef(bit CBitmap) C.MMBitmapRef {
+	return C.MMBitmapRef(bit)
+}
+
+// TostringBitmap tostring bitmap to string
+func TostringBitmap(bit C.MMBitmapRef) string {
+	strBit := C.tostring_bitmap(bit)
+	return C.GoString(strBit)
+}
+
+// TocharBitmap tostring bitmap to C.char
+func TocharBitmap(bit C.MMBitmapRef) *C.char {
+	strBit := C.tostring_bitmap(bit)
+	return strBit
+}
+
 func internalFindBitmap(bit, sbit C.MMBitmapRef, tolerance float64) (int, int) {
 	pos := C.find_bitmap(bit, sbit, C.float(tolerance))
 	// fmt.Println("pos----", pos)
 	return int(pos.x), int(pos.y)
+}
+
+// FindCBitmap find bitmap's pos by CBitmap
+func FindCBitmap(bmp CBitmap, args ...interface{}) (int, int) {
+	return FindBitmap(ToMMBitmapRef(bmp), args...)
 }
 
 // FindBitmap find the bitmap's pos
@@ -840,7 +965,7 @@ func FindBitmap(bit C.MMBitmapRef, args ...interface{}) (int, int) {
 		tolerance = 0.01
 	)
 
-	if len(args) > 0 {
+	if len(args) > 0 && args[0] != nil {
 		sbit = args[0].(C.MMBitmapRef)
 	} else {
 		sbit = CaptureScreen()
@@ -873,7 +998,7 @@ func FindPic(path string, args ...interface{}) (int, int) {
 
 	openbit := OpenBitmap(path)
 
-	if len(args) > 0 {
+	if len(args) > 0 && args[0] != nil {
 		sbit = args[0].(C.MMBitmapRef)
 	} else {
 		sbit = CaptureScreen()
@@ -900,7 +1025,7 @@ func FindEveryBitmap(bit C.MMBitmapRef, args ...interface{}) (int, int) {
 		lpos      C.MMPoint
 	)
 
-	if len(args) > 0 {
+	if len(args) > 0 && args[0] != nil {
 		sbit = args[0].(C.MMBitmapRef)
 	} else {
 		sbit = CaptureScreen()
@@ -944,34 +1069,10 @@ func CountBitmap(bitmap, sbit C.MMBitmapRef, args ...float32) int {
 	return int(count)
 }
 
-// FindBit find the bitmap, Wno-deprecated
-func FindBit(args ...interface{}) (int, int) {
-	var bit C.MMBitmapRef
-	bit = args[0].(C.MMBitmapRef)
-
-	var rect C.MMRect
-	Try(func() {
-		rect.origin.x = C.size_t(args[1].(int))
-		rect.origin.y = C.size_t(args[2].(int))
-		rect.size.width = C.size_t(args[3].(int))
-		rect.size.height = C.size_t(args[4].(int))
-	}, func(e interface{}) {
-		// fmt.Println("err:::", e)
-		// rect.origin.x = x
-		// rect.origin.y = y
-		// rect.size.width = w
-		// rect.size.height = h
-	})
-
-	pos := C.aFindBitmap(bit, rect)
-	// fmt.Println("pos----", pos)
-	return int(pos.x), int(pos.y)
-}
-
 // BitmapClick find the bitmap and click
 func BitmapClick(bitmap C.MMBitmapRef, args ...interface{}) {
 	x, y := FindBitmap(bitmap)
-	MovesClick(x, y, args)
+	MovesClick(x, y, args...)
 }
 
 // PointInBounds bitmap point in bounds
@@ -996,10 +1097,9 @@ func OpenBitmap(gpath string, args ...int) C.MMBitmapRef {
 	}
 
 	bit := C.bitmap_open(path, mtype)
-	defer C.free(unsafe.Pointer(path))
-	// fmt.Println("opening...", bit)
+	C.free(unsafe.Pointer(path))
+
 	return bit
-	// defer C.free(unsafe.Pointer(path))
 }
 
 // DecodeImg decode the image to image.Image and return
@@ -1012,11 +1112,21 @@ func OpenImg(path string) []byte {
 	return imgo.ImgToBytes(path)
 }
 
+// SaveImg save the image by []byte
+func SaveImg(b []byte, path string) {
+	imgo.Save(path, b)
+}
+
 // BitmapStr bitmap from string
 func BitmapStr(str string) C.MMBitmapRef {
+	return BitmapFromStr(str)
+}
+
+// BitmapFromStr bitmap from string
+func BitmapFromStr(str string) C.MMBitmapRef {
 	cs := C.CString(str)
 	bit := C.bitmap_from_string(cs)
-	defer C.free(unsafe.Pointer(cs))
+	C.free(unsafe.Pointer(cs))
 
 	return bit
 }
@@ -1032,9 +1142,7 @@ func SaveBitmap(bitmap C.MMBitmapRef, gpath string, args ...int) string {
 
 	path := C.CString(gpath)
 	saveBit := C.bitmap_save(bitmap, path, mtype)
-	// fmt.Println("saved...", saveBit)
-	// return bit
-	defer C.free(unsafe.Pointer(path))
+	C.free(unsafe.Pointer(path))
 
 	return C.GoString(saveBit)
 }
@@ -1089,6 +1197,7 @@ func CopyBitPB(bitmap C.MMBitmapRef) bool {
 
 // CopyBitpb copy bitmap to pasteboard, Wno-deprecated
 func CopyBitpb(bitmap C.MMBitmapRef) bool {
+	tt.Drop("CopyBitpb", "CopyBitPB")
 	return CopyBitPB(bitmap)
 }
 
@@ -1105,6 +1214,13 @@ func GetColor(bitmap C.MMBitmapRef, x, y int) C.MMRGBHex {
 	return color
 }
 
+// GetColors get bitmap color retrun string
+func GetColors(bitmap C.MMBitmapRef, x, y int) string {
+	clo := GetColor(bitmap, x, y)
+
+	return PadHex(clo)
+}
+
 // FindColor find bitmap color
 //
 // robotgo.FindColor(color CHex, bitmap C.MMBitmapRef, tolerance float)
@@ -1114,7 +1230,7 @@ func FindColor(color CHex, args ...interface{}) (int, int) {
 		bitmap    C.MMBitmapRef
 	)
 
-	if len(args) > 0 {
+	if len(args) > 0 && args[0] != nil {
 		bitmap = args[0].(C.MMBitmapRef)
 	} else {
 		bitmap = CaptureScreen()
@@ -1157,7 +1273,7 @@ func CountColor(color CHex, args ...interface{}) int {
 		bitmap    C.MMBitmapRef
 	)
 
-	if len(args) > 0 {
+	if len(args) > 0 && args[0] != nil {
 		bitmap = args[0].(C.MMBitmapRef)
 	} else {
 		bitmap = CaptureScreen()
@@ -1203,76 +1319,6 @@ func GetImgSize(imgPath string) (int, int) {
 }
 
 /*
- ___________    ____  _______ .__   __. .___________.
-|   ____\   \  /   / |   ____||  \ |  | |           |
-|  |__   \   \/   /  |  |__   |   \|  | `---|  |----`
-|   __|   \      /   |   __|  |  . `  |     |  |
-|  |____   \    /    |  |____ |  |\   |     |  |
-|_______|   \__/     |_______||__| \__|     |__|
-*/
-
-// AddEvent add event listener,
-//
-// parameters for the string type,
-// the keyboard corresponding key parameters,
-//
-// mouse arguments: mleft, mright, wheelDown, wheelUp,
-// wheelLeft, wheelRight.
-func AddEvent(key string) int {
-	keycode := Map{
-		"f1":  "59",
-		"f2":  "60",
-		"f3":  "61",
-		"f4":  "62",
-		"f5":  "63",
-		"f6":  "64",
-		"f7":  "65",
-		"f8":  "66",
-		"f9":  "67",
-		"f10": "68",
-		"f11": "69",
-		"f12": "70",
-		// more
-		"esc":     "11",
-		"tab":     "15",
-		"ctrl":    "29",
-		"control": "29",
-		"alt":     "56",
-		"space":   "57",
-		"shift":   "42",
-		"enter":   "28",
-		"command": "3675",
-	}
-
-	var (
-		// cs   *C.char
-		mArr = []string{"mleft", "mright", "wheelDown",
-			"wheelUp", "wheelLeft", "wheelRight"}
-		mouseBool bool
-	)
-
-	for i := 0; i < len(mArr); i++ {
-		if key == mArr[i] {
-			mouseBool = true
-		}
-	}
-
-	if len(key) > 1 && !mouseBool {
-		key = keycode[key].(string)
-	}
-
-	geve := hook.AddEvent(key)
-	// defer C.free(unsafe.Pointer(cs))
-
-	return geve
-}
-
-// StopEvent stop event listener
-func StopEvent() {
-	hook.StopEvent()
-}
-
-/*
 ____    __    ____  __  .__   __.  _______   ______   ____    __    ____
 \   \  /  \  /   / |  | |  \ |  | |       \ /  __  \  \   \  /  \  /   /
  \   \/    \/   /  |  | |   \|  | |  .--.  |  |  |  |  \   \/    \/   /
@@ -1296,6 +1342,7 @@ func ShowAlert(title, msg string, args ...string) int {
 		// msg = args[1]
 		defaultButton = args[0]
 	}
+
 	if len(args) > 1 {
 		cancelButton = args[1]
 	}
@@ -1308,10 +1355,10 @@ func ShowAlert(title, msg string, args ...string) int {
 	cbool := C.show_alert(atitle, amsg, adefaultButton, acancelButton)
 	ibool := int(cbool)
 
-	defer C.free(unsafe.Pointer(atitle))
-	defer C.free(unsafe.Pointer(amsg))
-	defer C.free(unsafe.Pointer(adefaultButton))
-	defer C.free(unsafe.Pointer(acancelButton))
+	C.free(unsafe.Pointer(atitle))
+	C.free(unsafe.Pointer(amsg))
+	C.free(unsafe.Pointer(adefaultButton))
+	C.free(unsafe.Pointer(acancelButton))
 
 	return ibool
 }
@@ -1424,31 +1471,33 @@ func GetHandle() int {
 
 // GetBHandle get the window handle, Wno-deprecated
 func GetBHandle() int {
+	tt.Drop("GetBHandle", "GetHandle")
 	hwnd := C.bget_handle()
 	ghwnd := int(hwnd)
 	//fmt.Println("gethwnd---", ghwnd)
 	return ghwnd
 }
 
+func cgetTitle(hwnd, isHwnd int32) string {
+	title := C.get_title(C.uintptr(hwnd), C.uintptr(isHwnd))
+	gtitle := C.GoString(title)
+
+	return gtitle
+}
+
 // GetTitle get the window title
 func GetTitle(args ...int32) string {
 	if len(args) <= 0 {
 		title := C.get_main_title()
-		gtittle := C.GoString(title)
-		return gtittle
+		gtitle := C.GoString(title)
+		return gtitle
 	}
 
-	var hwnd, isHwnd int32
-	if len(args) > 0 {
-		hwnd = args[0]
-	}
 	if len(args) > 1 {
-		isHwnd = args[1]
+		return internalGetTitle(args[0], args[1])
 	}
-	title := C.get_title(C.uintptr(hwnd), C.uintptr(isHwnd))
-	gtittle := C.GoString(title)
 
-	return gtittle
+	return internalGetTitle(args[0])
 }
 
 // GetPID get the process id
@@ -1465,20 +1514,18 @@ func internalGetBounds(pid int32, hwnd int) (int, int, int, int) {
 
 // Pids get the all process id
 func Pids() ([]int32, error) {
-	var ret []int32
-	pid, err := process.Pids()
-	if err != nil {
-		return ret, err
-	}
-
-	return pid, err
+	return ps.Pids()
 }
 
 // PidExists determine whether the process exists
 func PidExists(pid int32) (bool, error) {
-	abool, err := process.PidExists(pid)
+	return ps.PidExists(pid)
+}
 
-	return abool, err
+// Is64Bit determine whether the sys is 64bit
+func Is64Bit() bool {
+	b := C.Is64Bit()
+	return bool(b)
 }
 
 // Nps process struct
@@ -1490,26 +1537,11 @@ type Nps struct {
 // Process get the all process struct
 func Process() ([]Nps, error) {
 	var npsArr []Nps
-
-	pid, err := process.Pids()
-
-	if err != nil {
-		return npsArr, err
-	}
-
-	for i := 0; i < len(pid); i++ {
-		nps, err := process.NewProcess(pid[i])
-		if err != nil {
-			return npsArr, err
-		}
-		names, err := nps.Name()
-		if err != nil {
-			return npsArr, err
-		}
-
+	nps, err := ps.Process()
+	for i := 0; i < len(nps); i++ {
 		np := Nps{
-			pid[i],
-			names,
+			nps[i].Pid,
+			nps[i].Name,
 		}
 
 		npsArr = append(npsArr, np)
@@ -1520,64 +1552,24 @@ func Process() ([]Nps, error) {
 
 // FindName find the process name by the process id
 func FindName(pid int32) (string, error) {
-	nps, err := process.NewProcess(pid)
-	if err != nil {
-		return "", err
-	}
-
-	names, err := nps.Name()
-	if err != nil {
-		return "", err
-	}
-
-	return names, err
+	return ps.FindName(pid)
 }
 
 // FindNames find the all process name
 func FindNames() ([]string, error) {
-	var strArr []string
-	pid, err := process.Pids()
-
-	if err != nil {
-		return strArr, err
-	}
-
-	for i := 0; i < len(pid); i++ {
-		nps, err := process.NewProcess(pid[i])
-		if err != nil {
-			return strArr, err
-		}
-		names, err := nps.Name()
-		if err != nil {
-			return strArr, err
-		}
-
-		strArr = append(strArr, names)
-		return strArr, err
-
-	}
-
-	return strArr, err
+	return ps.FindNames()
 }
 
-// FindIds find the all process id by the process name
+// FindIds finds the all processes named with a subset
+// of "name" (case insensitive),
+// return matched IDs.
 func FindIds(name string) ([]int32, error) {
-	var pids []int32
-	nps, err := Process()
-	if err != nil {
-		return pids, err
-	}
+	return ps.FindIds(name)
+}
 
-	for i := 0; i < len(nps); i++ {
-		psname := strings.ToLower(nps[i].Name)
-		name = strings.ToLower(name)
-		abool := strings.Contains(psname, name)
-		if abool {
-			pids = append(pids, nps[i].Pid)
-		}
-	}
-
-	return pids, err
+// FindPath find the process path by the process pid
+func FindPath(pid int32) (string, error) {
+	return ps.FindPath(pid)
 }
 
 func internalActive(pid int32, hwnd int) {
@@ -1607,6 +1599,5 @@ func ActiveName(name string) error {
 
 // Kill kill the process by PID
 func Kill(pid int32) error {
-	ps := os.Process{Pid: int(pid)}
-	return ps.Kill()
+	return ps.Kill(pid)
 }
