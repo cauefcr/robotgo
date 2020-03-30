@@ -13,102 +13,60 @@ package main
 import (
 	"fmt"
 
+	hook "github.com/cauefcr/ghook"
 	"github.com/cauefcr/robotgo"
 	// "cauefcr/robotgo"
 )
 
 func addEvent() {
-	fmt.Println("--- Please press ctrl + shift + q ---")
-	ok := robotgo.AddEvents("q", "ctrl", "shift")
-	if ok {
-		fmt.Println("add events...")
-	}
+	fmt.Println("--- Please press ctrl + shift + q to stop hook ---")
+	robotgo.EventHook(hook.KeyDown, []string{"q", "ctrl", "shift"}, func(e hook.Event) {
+		fmt.Println("ctrl-shift-q")
+		robotgo.EventEnd()
+	})
 
 	fmt.Println("--- Please press w---")
-	ok = robotgo.AddEvents("w")
-	if ok {
-		fmt.Println("add events")
-	}
-
-	// start hook
-	s := robotgo.Start()
-	// end hook
-	defer robotgo.End()
-
-	for ev := range s {
-		fmt.Println("hook: ", ev)
-	}
+	robotgo.EventHook(hook.KeyDown, []string{"w"}, func(e hook.Event) {
+		fmt.Println("w")
+	})
+	s := robotgo.EventStart()
+	<-robotgo.EventProcess(s)
 }
 
 func addMouse() {
-	fmt.Println("--- Please press left mouse button ---")
-	ok := robotgo.AddMouse("left")
-	if ok {
-		fmt.Println("add mouse...")
-	}
+	fmt.Println("--- Please press left mouse button to see it's position and the right mouse button to exit ---")
+	robotgo.EventHook(hook.MouseDown, []string{}, func(e hook.Event) {
+		if e.Button == hook.MouseMap["left"] {
+			fmt.Printf("mleft @ %v - %v\n", e.X, e.Y)
+		} else if e.Button == hook.MouseMap["right"] {
+			robotgo.EventEnd()
+		}
+	})
 
-	fmt.Println("--- Please press left mouse button and move mosue to 100,100 ---")
-	ok = robotgo.AddMouse("left", 100, 100)
-	if ok {
-		fmt.Println("add mouse and move to 100,100 ...")
-	}
-
-	fmt.Println("--- Please move mosue to 100,100 ---")
-	ok = robotgo.AddMousePos(100, 100)
-	if ok {
-		fmt.Println(" move mouse to 100,100 ...")
-	}
+	s := robotgo.EventStart()
+	<-robotgo.EventProcess(s)
 }
 
-func add() {
-	fmt.Println("--- Please press v---")
-	eve := robotgo.AddEvent("v")
-
-	if eve {
-		fmt.Println("--- You press v---", "v")
-	}
-
-	fmt.Println("--- Please press k---")
-	keve := robotgo.AddEvent("k")
-	if keve {
-		fmt.Println("--- You press k---", "k")
-	}
-
-	fmt.Println("--- Please press f1---")
-	feve := robotgo.AddEvent("f1")
-	if feve {
-		fmt.Println("You press...", "f1")
-	}
-}
-
-func event() {
+func lowLevel() {
 	////////////////////////////////////////////////////////////////////////////////
 	// Global event listener
 	////////////////////////////////////////////////////////////////////////////////
-
-	add()
-
-	fmt.Println("--- Please press left mouse button---")
-	mleft := robotgo.AddEvent("mleft")
-	if mleft {
-		fmt.Println("--- You press left mouse button---", "mleft")
+	fmt.Println("Press q to stop event gathering")
+	evChan := robotgo.EventStart()
+	for e := range evChan {
+		fmt.Println(e)
+		if e.Keychar == 'q' {
+			robotgo.EventEnd()
+			// break
+		}
 	}
-
-	mright := robotgo.AddEvent("mright")
-	if mright {
-		fmt.Println("--- You press right mouse button---", "mright")
-	}
-
-	// stop AddEvent
-	// robotgo.StopEvent()
 }
 
 func main() {
 	fmt.Println("test begin...")
-
 	addEvent()
 
 	addMouse()
 
-	event()
+	lowLevel()
 }

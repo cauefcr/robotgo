@@ -1,6 +1,9 @@
 module github.com/cauefcr/robotgo
 
+// replace github.com/cauefcr/ghook => /home/h/go/src/github.com/cauefcr/ghook
+
 require (
+	github.com/cauefcr/ghook v0.0.0-20200330052438-6c9e89be03c5
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/lxn/win v0.0.0-20191128105842-2da648fda5b4
 	github.com/otiai10/curr v0.0.0-20190513014714-f5a3d24e5776 // indirect
